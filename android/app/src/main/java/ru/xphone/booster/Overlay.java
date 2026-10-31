@@ -390,9 +390,9 @@ public final class Overlay {
                 } else {
                     PcLink.requestStart(ctx);
                     if (PcLink.state() == PcLink.State.NO_PC)
-                        Toast.makeText(ctx, Shell.ready(ctx)
+                        Toast.makeText(ctx, PcLink.canEnableWifiDebugging(ctx)
                                 ? "Ищем компьютер… Проверьте, что XPhone на ПК открыт."
-                                : "Включите «Отладку по Wi-Fi» (плитка в шторке) и откройте XPhone на ПК.", Toast.LENGTH_LONG).show();
+                                : "Включите «Беспроводную отладку» плиткой в шторке и откройте XPhone на ПК.", Toast.LENGTH_LONG).show();
                 }
                 paint();
                 return;

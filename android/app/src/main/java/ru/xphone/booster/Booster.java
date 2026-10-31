@@ -97,9 +97,26 @@ public final class Booster {
         }
     }
 
-    /** Нужен ли Shizuku. */
+    /** Нужен ли Shizuku (если нет права на системные настройки). */
     public static boolean needsShizuku(String id) {
         return !(DND.equals(id) || RES.equals(id) || STREAM.equals(id));
+    }
+
+    /**
+     * Право менять системные настройки — выдаёт XPhone на ПК при подключении телефона (или Shizuku).
+     * Сохраняется навсегда: с ним телефон сам включает «Отладку по Wi-Fi» и выключает анимации без Shizuku.
+     */
+    public static boolean canWriteSecure(Context c) {
+        return c.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Записать глобальную настройку: через Shizuku или своим правом. */
+    public static void putGlobal(Context c, String key, String value) {
+        if (Shell.ready(c)) {
+            sh(c, "settings put global " + key + " " + value);
+        } else if (canWriteSecure(c)) {
+            try { Settings.Global.putString(c.getContentResolver(), key, value); } catch (Exception ignored) { }
+        }
     }
 
     /** Есть ли функция на этом телефоне вообще. */
@@ -114,6 +131,7 @@ public final class Booster {
         if (!supported(id)) return false;
         if (DND.equals(id)) return Shell.ready(c) || dndAccess(c);
         if (RES.equals(id) || STREAM.equals(id)) return true;
+        if (ANIM.equals(id)) return Shell.ready(c) || canWriteSecure(c);
         return Shell.ready(c);
     }
 
@@ -158,9 +176,7 @@ public final class Booster {
                 sh(c, "settings put system pass_through " + (on ? 1 : 0));
                 break;
             case ANIM:
-                StringBuilder cmd = new StringBuilder();
-                for (String k : ANIM_KEYS) cmd.append("settings put global ").append(k).append(on ? " 0; " : " 1.0; ");
-                sh(c, cmd.toString());
+                for (String k : ANIM_KEYS) putGlobal(c, k, on ? "0" : "1.0");
                 break;
             case BRIGHT:
                 sh(c, "settings put system screen_brightness_mode " + (on ? 0 : 1));
@@ -256,10 +272,7 @@ public final class Booster {
                         break;
                     case ANIM:
                         String[] vals = v.split("\\|");
-                        StringBuilder cmd = new StringBuilder();
-                        for (int i = 0; i < ANIM_KEYS.length && i < vals.length; i++)
-                            cmd.append("settings put global ").append(ANIM_KEYS[i]).append(' ').append(vals[i]).append("; ");
-                        sh(c, cmd.toString());
+                        for (int i = 0; i < ANIM_KEYS.length && i < vals.length; i++) putGlobal(c, ANIM_KEYS[i], vals[i]);
                         break;
                     case BRIGHT:
                         sh(c, "settings put system screen_brightness_mode " + v);

@@ -153,9 +153,16 @@ public final class PcLink {
 
     /** Включить «Отладку по Wi-Fi» и не давать телефону «забывать» компьютер через неделю. */
     public static void enableWifiDebugging(Context c) {
-        if (!Shell.ready(c)) return;
-        Shell.background(() -> Shell.run(c,
-                "settings put global adb_allowed_connection_time 0; settings put global adb_wifi_enabled 1"));
+        if (!canEnableWifiDebugging(c)) return;
+        Shell.background(() -> {
+            Booster.putGlobal(c, "adb_allowed_connection_time", "0");
+            Booster.putGlobal(c, "adb_wifi_enabled", "1");
+        });
+    }
+
+    /** Может ли приложение само включить «Отладку по Wi-Fi» (через Shizuku или своё право). */
+    public static boolean canEnableWifiDebugging(Context c) {
+        return Shell.ready(c) || Booster.canWriteSecure(c);
     }
 
     public static boolean wifiDebuggingOn(Context c) {

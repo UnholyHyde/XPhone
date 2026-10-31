@@ -151,12 +151,21 @@ public class MainActivity extends Activity {
             perms.addView(statusRow("Уведомления", "Значок «XPhone следит за играми»", notifOk(this),
                     () -> requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2)));
         }
+        divider(perms);
+        perms.addView(statusRow("Сам включать «Отладку по Wi-Fi»",
+                Booster.canWriteSecure(this) || st == Shell.State.READY
+                        ? "Телефон включит её сам, когда нужна связь с ПК"
+                        : "Подключите телефон кабелем к XPhone на ПК один раз — он выдаст это разрешение",
+                Booster.canWriteSecure(this) || st == Shell.State.READY, () -> {
+                    if (st == Shell.State.READY) grantAllViaShizuku();
+                    else Toast.makeText(this, "Подключите телефон кабелем к компьютеру с открытым XPhone — разрешение выдастся само.", Toast.LENGTH_LONG).show();
+                }));
         if (st != Shell.State.READY) {
             divider(perms);
             perms.addView(statusRow("«Не беспокоить» без Shizuku", "Доступ к режиму «Не беспокоить»", Booster.dndAccess(this),
                     () -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))));
         }
-        if (st == Shell.State.READY && !(overlayOk(this) && usageOk(this) && notifOk(this))) {
+        if (st == Shell.State.READY && !(overlayOk(this) && usageOk(this) && notifOk(this) && Booster.canWriteSecure(this))) {
             TextView all = Ui.button(this, "Выдать всё через Shizuku", true);
             all.setOnClickListener(v -> grantAllViaShizuku());
             perms.addView(all, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
@@ -171,7 +180,7 @@ public class MainActivity extends Activity {
         for (String id : Booster.TOGGLES) {
             if (!Booster.supported(id)) continue;
             divider(autos);
-            boolean locked = Booster.needsShizuku(id) && st != Shell.State.READY;
+            boolean locked = Booster.needsShizuku(id) && !Booster.available(this, id);
             autos.addView(plainSwitch("Включать «" + Booster.title(id) + "»",
                     locked ? "Нужен Shizuku" : Booster.hint(id), Prefs.auto(this, id), on -> Prefs.setAuto(this, id, on)));
         }
@@ -260,8 +269,8 @@ public class MainActivity extends Activity {
             if (ps == PcLink.State.NO_PC) {
                 TextView find = Ui.button(this, "Подключиться", false);
                 find.setOnClickListener(v -> {
-                    if (!Shell.ready(this))
-                        Toast.makeText(this, "Включите «Отладку по Wi-Fi» (плитка в шторке) — или запустите Shizuku, и XPhone включит её сам.", Toast.LENGTH_LONG).show();
+                    if (!PcLink.canEnableWifiDebugging(this))
+                        Toast.makeText(this, "Включите «Беспроводную отладку» плиткой в шторке. Чтобы телефон делал это сам — один раз подключите его кабелем к XPhone на ПК.", Toast.LENGTH_LONG).show();
                     PcLink.findPc(this);
                 });
                 buttons.addView(find, new LinearLayout.LayoutParams(0, -2, 1));
@@ -366,7 +375,7 @@ public class MainActivity extends Activity {
                 };
                 break;
             default:
-                sub = "Не установлен. Без него работают панель, «Не беспокоить» и нагрев; остальное — с ним.";
+                sub = "Не обязателен. Без него работают трансляция на ПК, панель, «Не беспокоить», нагрев и «Без анимаций». С ним — ещё «Турбо», «Питание USB», «Яркость», «Очистка».";
                 btn = "Скачать";
                 act = () -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/")));
         }
@@ -389,7 +398,7 @@ public class MainActivity extends Activity {
     private void grantAllViaShizuku() {
         String p = getPackageName();
         String cmd = "appops set " + p + " SYSTEM_ALERT_WINDOW allow; appops set " + p + " GET_USAGE_STATS allow; "
-                + "cmd notification allow_dnd " + p + "; "
+                + "cmd notification allow_dnd " + p + "; pm grant " + p + " android.permission.WRITE_SECURE_SETTINGS; "
                 + (Build.VERSION.SDK_INT >= 33 ? "pm grant " + p + " android.permission.POST_NOTIFICATIONS; " : "");
         Shell.runAsync(this, cmd, r -> {
             render();

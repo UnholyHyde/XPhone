@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Право на системные настройки: выдаёт XPhone на ПК (pm grant) или Shizuku.
+         С ним телефон сам включает «Отладку по Wi-Fi» и выключает анимации без Shizuku. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Связь с XPhone на ПК (через adb, только 127.0.0.1) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Панель поверх игры -->

@@ -210,12 +210,15 @@ public sealed class AdbClient
     }
 
     /// <summary>
-    /// Если на телефоне стоит Shizuku (нужен игровой панели XPhone), но он не запущен — запустить.
-    /// После перезагрузки телефона Shizuku сам не стартует; так достаточно подключить телефон к ПК.
+    /// Подготовка телефона для приложения XPhone: выдать ему право на системные настройки
+    /// и, если стоит Shizuku, но он не запущен, — запустить (после перезагрузки сам он не стартует).
     /// </summary>
     public async Task EnsureShizukuAsync(PhoneDevice d)
     {
         const string script =
+            // Приложению XPhone на телефоне — право менять системные настройки (сохраняется навсегда):
+            // так оно само включает «Отладку по Wi-Fi» даже без Shizuku.
+            "pm path ru.xphone.booster >/dev/null 2>&1 && pm grant ru.xphone.booster android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; " +
             "p=$(pm path moe.shizuku.privileged.api 2>/dev/null | head -1 | cut -d: -f2); " +
             "[ -z \"$p\" ] && exit 0; pidof shizuku_server >/dev/null && exit 0; " +
             "s=$(ls \"$(dirname \"$p\")\"/lib/*/libshizuku.so 2>/dev/null | head -1); [ -n \"$s\" ] && \"$s\"";
