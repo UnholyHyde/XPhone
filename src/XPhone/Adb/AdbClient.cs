@@ -209,6 +209,20 @@ public sealed class AdbClient
         if (ip.Success) d.IpAddress = ip.Groups[1].Value;
     }
 
+    /// <summary>
+    /// Если на телефоне стоит Shizuku (нужен игровой панели XPhone), но он не запущен — запустить.
+    /// После перезагрузки телефона Shizuku сам не стартует; так достаточно подключить телефон к ПК.
+    /// </summary>
+    public async Task EnsureShizukuAsync(PhoneDevice d)
+    {
+        const string script =
+            "p=$(pm path moe.shizuku.privileged.api 2>/dev/null | head -1 | cut -d: -f2); " +
+            "[ -z \"$p\" ] && exit 0; pidof shizuku_server >/dev/null && exit 0; " +
+            "s=$(ls \"$(dirname \"$p\")\"/lib/*/libshizuku.so 2>/dev/null | head -1); [ -n \"$s\" ] && \"$s\"";
+        try { await ProcessRunner.RunAsync(AdbPath, new[] { "-s", d.Serial, "shell", script }, 20000); }
+        catch { }
+    }
+
     // ── Wi-Fi ───────────────────────────────────────────────────────────
 
     /// <summary>Телефоны с включённой «Отладкой по Wi-Fi» в локальной сети (через mDNS).</summary>

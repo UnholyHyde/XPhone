@@ -139,6 +139,9 @@ public sealed class DeviceWatcher : IDisposable
                         await _adb.FillInfoAsync(d);
                         if (d.HardwareSerial != null) _infoCache[d.Serial] = d;
                         info = d;
+                        // Игровой панели на телефоне нужен Shizuku — запустим, если он стоит и спит.
+                        var dev = d;
+                        _ = Task.Run(() => _adb.EnsureShizukuAsync(dev));
                     }
                     else
                     {

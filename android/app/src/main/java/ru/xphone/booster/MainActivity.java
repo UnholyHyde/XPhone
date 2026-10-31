@@ -1,0 +1,375 @@
+package ru.xphone.booster;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AppOpsManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Process;
+import android.provider.Settings;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import rikka.shizuku.Shizuku;
+
+/** Настройки игровой панели XPhone. */
+public class MainActivity extends Activity {
+
+    private LinearLayout content;
+
+    private final Shizuku.OnRequestPermissionResultListener permListener = (code, result) -> runOnUiThread(this::render);
+    private final Shizuku.OnBinderReceivedListener binderListener = () -> runOnUiThread(this::render);
+    private final Shizuku.OnBinderDeadListener deadListener = () -> runOnUiThread(this::render);
+
+    // ── Права ─────────────────────────────────────────────────────────
+
+    public static boolean overlayOk(Context c) { return Settings.canDrawOverlays(c); }
+
+    public static boolean usageOk(Context c) {
+        AppOpsManager ops = c.getSystemService(AppOpsManager.class);
+        int mode = Build.VERSION.SDK_INT >= 29
+                ? ops.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), c.getPackageName())
+                : ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), c.getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
+    public static boolean notifOk(Context c) {
+        return Build.VERSION.SDK_INT < 33 || c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public static boolean permissionsOk(Context c) { return overlayOk(c) && usageOk(c); }
+
+    // ── Жизненный цикл ────────────────────────────────────────────────
+
+    @Override
+    protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int p = Ui.dp(this, 18);
+        content.setPadding(p, Ui.dp(this, 22), p, Ui.dp(this, 28));
+        scroll.addView(content);
+        setContentView(scroll);
+        // Android 15+ рисует приложение под строкой состояния — отодвигаем содержимое.
+        final int padTop = content.getPaddingTop(), padBottom = content.getPaddingBottom();
+        scroll.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top, bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                top = bars.top; bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop(); bottom = insets.getSystemWindowInsetBottom();
+            }
+            content.setPadding(content.getPaddingLeft(), padTop + top, content.getPaddingRight(), padBottom + bottom);
+            return insets;
+        });
+        Shizuku.addRequestPermissionResultListener(permListener);
+        Shizuku.addBinderReceivedListenerSticky(binderListener);
+        Shizuku.addBinderDeadListener(deadListener);
+    }
+
+    @Override
+    protected void onDestroy() {
+        Shizuku.removeRequestPermissionResultListener(permListener);
+        Shizuku.removeBinderReceivedListener(binderListener);
+        Shizuku.removeBinderDeadListener(deadListener);
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        render();
+        if (Prefs.enabled(this) && permissionsOk(this)) BoostService.start(this);
+    }
+
+    // ── Экран ─────────────────────────────────────────────────────────
+
+    private void render() {
+        content.removeAllViews();
+
+        // Шапка
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.mipmap.ic_launcher);
+        head.addView(logo, new LinearLayout.LayoutParams(Ui.dp(this, 40), Ui.dp(this, 40)));
+        LinearLayout titles = new LinearLayout(this);
+        titles.setOrientation(LinearLayout.VERTICAL);
+        titles.setPadding(Ui.dp(this, 12), 0, 0, 0);
+        titles.addView(Ui.text(this, "XPHONE", 18, Ui.TEXT, 800));
+        titles.addView(Ui.text(this, "Игровая панель", 13, Ui.MUTED, 500), Ui.lpMargins(this, -2, -2, 0, 4, 0, 0));
+        head.addView(titles);
+        content.addView(head, Ui.lpMargins(this, -1, -2, 0, 0, 0, 18));
+
+        // Главный переключатель
+        LinearLayout master = switchRow("Игровая панель включена",
+                "Свайп от правого края в игре открывает панель", Prefs.enabled(this), on -> {
+                    Prefs.put(this, Prefs.ENABLED, on);
+                    if (on && permissionsOk(this)) BoostService.start(this);
+                    if (!on) BoostService.stop(this);
+                });
+        content.addView(master, Ui.lpMargins(this, -1, -2, 0, 0, 0, 18));
+
+        // Права
+        section("ЧТО НУЖНО");
+        LinearLayout perms = Ui.card(this);
+        Shell.State st = Shell.state(this);
+        perms.addView(shizukuRow(st));
+        divider(perms);
+        perms.addView(statusRow("Поверх других приложений", "Чтобы показывать язычок и панель", overlayOk(this),
+                () -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())))));
+        divider(perms);
+        perms.addView(statusRow("Доступ к истории использования", "Чтобы понять, что открыта игра", usageOk(this),
+                () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))));
+        if (Build.VERSION.SDK_INT >= 33) {
+            divider(perms);
+            perms.addView(statusRow("Уведомления", "Значок «XPhone следит за играми»", notifOk(this),
+                    () -> requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2)));
+        }
+        if (st != Shell.State.READY) {
+            divider(perms);
+            perms.addView(statusRow("«Не беспокоить» без Shizuku", "Доступ к режиму «Не беспокоить»", Booster.dndAccess(this),
+                    () -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))));
+        }
+        if (st == Shell.State.READY && !(overlayOk(this) && usageOk(this) && notifOk(this))) {
+            TextView all = Ui.button(this, "Выдать всё через Shizuku", true);
+            all.setOnClickListener(v -> grantAllViaShizuku());
+            perms.addView(all, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
+        }
+        content.addView(perms);
+
+        // Что включать само
+        section("ПРИ ЗАПУСКЕ ИГРЫ");
+        LinearLayout autos = Ui.card(this);
+        autos.addView(plainSwitch("Сразу открывать панель", null, Prefs.autoPanel(this),
+                on -> Prefs.put(this, Prefs.AUTO_PANEL, on)));
+        for (String id : Booster.TOGGLES) {
+            if (!Booster.supported(id)) continue;
+            divider(autos);
+            boolean locked = Booster.needsShizuku(id) && st != Shell.State.READY;
+            autos.addView(plainSwitch("Включать «" + Booster.title(id) + "»",
+                    locked ? "Нужен Shizuku" : Booster.hint(id), Prefs.auto(this, id), on -> Prefs.setAuto(this, id, on)));
+        }
+        divider(autos);
+        autos.addView(plainSwitch("После игры возвращать как было", "Всё, что включила панель, выключится само",
+                Prefs.restore(this), on -> Prefs.put(this, Prefs.RESTORE, on)));
+        content.addView(autos);
+
+        // Игры
+        section("ИГРЫ");
+        LinearLayout games = Ui.card(this);
+        List<App> apps = installedApps();
+        int shown = 0;
+        for (App a : apps) {
+            if (!Prefs.isGame(this, a.pkg)) continue;
+            if (shown++ > 0) divider(games);
+            games.addView(gameRow(a, true));
+        }
+        if (shown == 0) games.addView(Ui.text(this, "Игр пока нет. Добавьте их кнопкой ниже.", 13, Ui.MUTED, 500));
+        TextView add = Ui.button(this, "Добавить приложение как игру", false);
+        add.setOnClickListener(v -> pickApps(apps));
+        games.addView(add, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
+        content.addView(games);
+
+        // Проверка
+        TextView test = Ui.button(this, "Показать панель сейчас", true);
+        test.setOnClickListener(v -> {
+            if (!overlayOk(this)) { Toast.makeText(this, "Сначала разрешите «Поверх других приложений»", Toast.LENGTH_LONG).show(); return; }
+            Intent i = new Intent(this, BoostService.class).setAction(BoostService.ACTION_SHOW_PANEL);
+            startForegroundService(i);
+        });
+        content.addView(test, Ui.lpMargins(this, -1, -2, 0, 22, 0, 0));
+
+        TextView foot = Ui.text(this, "XPhone " + BuildConfig.VERSION_NAME + " · Иконки Lucide (ISC), шрифты Manrope и Unbounded (OFL), Shizuku API (Apache 2.0)",
+                11, Ui.DIM, 500);
+        foot.setGravity(Gravity.CENTER);
+        content.addView(foot, Ui.lpMargins(this, -1, -2, 0, 22, 0, 0));
+    }
+
+    private void section(String title) {
+        content.addView(Ui.text(this, title, 11, Ui.MUTED, 700), Ui.lpMargins(this, -1, -2, 4, 22, 0, 10));
+    }
+
+    private void divider(LinearLayout l) {
+        View d = new View(this);
+        d.setBackgroundColor(Ui.LINE);
+        l.addView(d, Ui.lpMargins(this, -1, 1, 0, 12, 0, 12));
+    }
+
+    private LinearLayout textBlock(String title, String sub) {
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL);
+        t.addView(Ui.text(this, title, 14, Ui.TEXT, 600));
+        if (sub != null) t.addView(Ui.text(this, sub, 12, Ui.MUTED, 500), Ui.lpMargins(this, -2, -2, 0, 4, 0, 0));
+        return t;
+    }
+
+    private LinearLayout switchRow(String title, String sub, boolean on, Ui.Toggle.Listener l) {
+        LinearLayout row = plainSwitch(title, sub, on, l);
+        row.setBackground(Ui.box(this, Ui.CARD, Ui.LINE, 14));
+        row.setPadding(Ui.dp(this, 16), Ui.dp(this, 14), Ui.dp(this, 16), Ui.dp(this, 14));
+        return row;
+    }
+
+    private LinearLayout plainSwitch(String title, String sub, boolean on, Ui.Toggle.Listener l) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(textBlock(title, sub), new LinearLayout.LayoutParams(0, -2, 1));
+        Ui.Toggle t = new Ui.Toggle(this);
+        t.setOn(on);
+        t.setListener(l);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 26));
+        tl.leftMargin = Ui.dp(this, 12);
+        row.addView(t, tl);
+        row.setOnClickListener(v -> t.performClick());
+        return row;
+    }
+
+    private LinearLayout statusRow(String title, String sub, boolean ok, Runnable fix) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(Ui.icon(this, ok ? R.drawable.ic_check : R.drawable.ic_alert, 18, ok ? Ui.TEXT : Ui.MUTED));
+        LinearLayout tb = textBlock(title, sub);
+        tb.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
+        row.addView(tb, new LinearLayout.LayoutParams(0, -2, 1));
+        if (!ok) {
+            TextView b = Ui.button(this, "Выдать", false);
+            b.setOnClickListener(v -> fix.run());
+            row.addView(b);
+        }
+        return row;
+    }
+
+    private LinearLayout shizukuRow(Shell.State st) {
+        String sub, btn = null;
+        Runnable act = null;
+        switch (st) {
+            case READY:
+                sub = "Работает — открыты все функции";
+                break;
+            case NO_PERMISSION:
+                sub = "Shizuku запущен, но XPhone ещё не разрешён";
+                btn = "Разрешить";
+                act = Shell::requestPermission;
+                break;
+            case NOT_RUNNING:
+                sub = "Не запущен. Откройте Shizuku → «Запустить» (через отладку по Wi-Fi). Или подключите телефон к XPhone на ПК — он запустит Shizuku сам.";
+                btn = "Открыть";
+                act = () -> {
+                    Intent i = getPackageManager().getLaunchIntentForPackage(Shell.SHIZUKU_PKG);
+                    if (i != null) startActivity(i);
+                };
+                break;
+            default:
+                sub = "Не установлен. Без него работают панель, «Не беспокоить» и нагрев; остальное — с ним.";
+                btn = "Скачать";
+                act = () -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/")));
+        }
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        boolean ok = st == Shell.State.READY;
+        row.addView(Ui.icon(this, ok ? R.drawable.ic_check : R.drawable.ic_alert, 18, ok ? Ui.TEXT : Ui.MUTED));
+        LinearLayout tb = textBlock("Shizuku", sub);
+        tb.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
+        row.addView(tb, new LinearLayout.LayoutParams(0, -2, 1));
+        if (btn != null) {
+            TextView b = Ui.button(this, btn, st == Shell.State.NO_PERMISSION);
+            Runnable a = act;
+            b.setOnClickListener(v -> a.run());
+            row.addView(b);
+        }
+        return row;
+    }
+
+    private void grantAllViaShizuku() {
+        String p = getPackageName();
+        String cmd = "appops set " + p + " SYSTEM_ALERT_WINDOW allow; appops set " + p + " GET_USAGE_STATS allow; "
+                + "cmd notification allow_dnd " + p + "; "
+                + (Build.VERSION.SDK_INT >= 33 ? "pm grant " + p + " android.permission.POST_NOTIFICATIONS; " : "");
+        Shell.runAsync(this, cmd, r -> {
+            render();
+            if (Prefs.enabled(this) && permissionsOk(this)) BoostService.start(this);
+            Toast.makeText(this, permissionsOk(this) ? "Готово" : "Не всё получилось — выдайте вручную", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    // ── Игры ──────────────────────────────────────────────────────────
+
+    private static final class App {
+        String pkg, label;
+    }
+
+    private List<App> installedApps() {
+        PackageManager pm = getPackageManager();
+        Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<App> list = new ArrayList<>();
+        for (ResolveInfo ri : pm.queryIntentActivities(main, 0)) {
+            String pkg = ri.activityInfo.packageName;
+            if (pkg.equals(getPackageName()) || list.stream().anyMatch(a -> a.pkg.equals(pkg))) continue;
+            App a = new App();
+            a.pkg = pkg;
+            a.label = ri.loadLabel(pm).toString();
+            list.add(a);
+        }
+        Collections.sort(list, (x, y) -> x.label.compareToIgnoreCase(y.label));
+        return list;
+    }
+
+    private LinearLayout gameRow(App a, boolean isGame) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView ic = new ImageView(this);
+        try { ic.setImageDrawable(getPackageManager().getApplicationIcon(a.pkg)); } catch (Exception ignored) { }
+        row.addView(ic, new LinearLayout.LayoutParams(Ui.dp(this, 32), Ui.dp(this, 32)));
+        TextView name = Ui.text(this, a.label, 14, Ui.TEXT, 600);
+        name.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 8), 0);
+        name.setSingleLine(true);
+        row.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        Ui.Toggle t = new Ui.Toggle(this);
+        t.setOn(isGame);
+        t.setListener(on -> Prefs.setGame(this, a.pkg, on));
+        row.addView(t);
+        return row;
+    }
+
+    private void pickApps(List<App> apps) {
+        List<App> others = new ArrayList<>();
+        for (App a : apps) if (!Prefs.isGame(this, a.pkg)) others.add(a);
+        String[] names = new String[others.size()];
+        for (int i = 0; i < names.length; i++) names[i] = others.get(i).label;
+        boolean[] checked = new boolean[names.length];
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Какие приложения считать играми?")
+                .setMultiChoiceItems(names, checked, (d, i, v) -> checked[i] = v)
+                .setPositiveButton("Добавить", (d, w) -> {
+                    for (int i = 0; i < checked.length; i++) if (checked[i]) Prefs.setGame(this, others.get(i).pkg, true);
+                    render();
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        render();
+    }
+}

@@ -18,6 +18,14 @@
 - scrcpy/adb лежат в `tools\` без изменений. Обновление: скачать `scrcpy-win64-vX.zip` с GitHub, сверить SHA256, заменить файлы, поправить версию в `licenses\NOTICE.txt` и README. Перед этим проверить `scrcpy --help`: параметры могли поменяться.
 - Сохраняй `.ps1` в UTF-8 **с BOM** (иначе Windows PowerShell ломает русский текст).
 
+## Android-приложение (android/)
+
+- Java, `ru.xphone.booster`, minSdk 26, target 36. Зависимости — только Shizuku API. UI собирается кодом (`Ui.java`), стиль как у ПК-версии.
+- Инструменты сборки вне репозитория: `%LOCALAPPDATA%\XPhone-build` (jdk, android-sdk, gradle). `JAVA_HOME` → `...\XPhone-build\jdk`.
+- Ключ подписи: `Документы\XPhone-signing-key\xphone-release.jks` (не в git!). Пароли — `%USERPROFILE%\.gradle\gradle.properties`. Не печатать их в вывод.
+- Проверено на S25 Ultra: `cmd display set-user-preferred-display-mode` не работает (SecurityException) — разрешение только через настройки. `cmd notification set_dnd none` глушит и игру — используем `priority`.
+- После переустановки с другой подписью Shizuku-разрешение выдаётся заново (только руками пользователя).
+
 ## Сборка и запуск
 
 ```

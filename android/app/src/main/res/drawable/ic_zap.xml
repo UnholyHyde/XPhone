@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lucide «zap» (ISC) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M 4 14 a 1 1 0 0 1 -.78 -1.63 l 9.9 -10.2 a .5 .5 0 0 1 .86 .46 l -1.92 6.02 A 1 1 0 0 0 13 10 h 7 a 1 1 0 0 1 .78 1.63 l -9.9 10.2 a .5 .5 0 0 1 -.86 -.46 l 1.92 -6.02 A 1 1 0 0 0 11 14 z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.8"
+        android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+</vector>
