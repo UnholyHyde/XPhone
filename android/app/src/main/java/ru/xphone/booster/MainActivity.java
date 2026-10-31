@@ -97,6 +97,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        PcLink.start(this);
+        PcLink.addListener(pcListener);
         render();
         if (Prefs.enabled(this) && permissionsOk(this)) BoostService.start(this);
     }
@@ -128,6 +130,10 @@ public class MainActivity extends Activity {
                     if (!on) BoostService.stop(this);
                 });
         content.addView(master, Ui.lpMargins(this, -1, -2, 0, 0, 0, 18));
+
+        // Компьютер
+        section("КОМПЬЮТЕР");
+        content.addView(pcCard());
 
         // Права
         section("ЧТО НУЖНО");
@@ -203,6 +209,86 @@ public class MainActivity extends Activity {
                 11, Ui.DIM, 500);
         foot.setGravity(Gravity.CENTER);
         content.addView(foot, Ui.lpMargins(this, -1, -2, 0, 22, 0, 0));
+    }
+
+    /** Связь с XPhone на компьютере: состояние, кнопки, трансляция вместе с игрой. */
+    private LinearLayout pcCard() {
+        LinearLayout card = Ui.card(this);
+        PcLink.State ps = PcLink.state();
+        String name = PcLink.pcName() != null ? PcLink.pcName() : "компьютеру";
+        boolean ever = Prefs.get(this, "pc_ever_connected", false);
+        String title, sub;
+        switch (ps) {
+            case STREAMING:
+                title = "Идёт трансляция";
+                sub = "Экран и звук телефона — на " + name;
+                break;
+            case CONNECTING:
+                title = "Запускаем трансляцию…";
+                sub = "Окно появится на компьютере через пару секунд";
+                break;
+            case IDLE:
+                title = "Подключено к " + name;
+                sub = "Можно начинать трансляцию";
+                break;
+            default:
+                title = PcLink.waiting() ? "Ищем компьютер…" : "Компьютер не подключён";
+                sub = ever
+                        ? "Откройте XPhone на ПК. Телефон и компьютер — в одной сети Wi-Fi (или подключите кабель)."
+                        : "Первый раз: в XPhone на ПК нажмите «Сопряжение по Wi-Fi» и отсканируйте QR-код телефоном. Дальше всё само.";
+        }
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(Ui.icon(this, R.drawable.ic_cast, 22, ps == PcLink.State.STREAMING ? Ui.ACCENT : Ui.SILVER));
+        LinearLayout tb = textBlock(title, sub);
+        tb.setPadding(Ui.dp(this, 12), 0, 0, 0);
+        row.addView(tb, new LinearLayout.LayoutParams(0, -2, 1));
+        card.addView(row);
+
+        if (PcLink.message() != null) {
+            TextView m = Ui.text(this, PcLink.message(), 12, Ui.SILVER, 600);
+            card.addView(m, Ui.lpMargins(this, -1, -2, 34, 8, 0, 0));
+        }
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        if (ps == PcLink.State.STREAMING) {
+            TextView stop = Ui.button(this, "Остановить трансляцию", false);
+            stop.setOnClickListener(v -> PcLink.requestStop());
+            buttons.addView(stop, new LinearLayout.LayoutParams(0, -2, 1));
+        } else if (ps != PcLink.State.CONNECTING) {
+            if (ps == PcLink.State.NO_PC) {
+                TextView find = Ui.button(this, "Подключиться", false);
+                find.setOnClickListener(v -> {
+                    if (!Shell.ready(this))
+                        Toast.makeText(this, "Включите «Отладку по Wi-Fi» (плитка в шторке) — или запустите Shizuku, и XPhone включит её сам.", Toast.LENGTH_LONG).show();
+                    PcLink.findPc(this);
+                });
+                buttons.addView(find, new LinearLayout.LayoutParams(0, -2, 1));
+            }
+            TextView start = Ui.button(this, "Начать трансляцию", true);
+            start.setOnClickListener(v -> PcLink.requestStart(this));
+            LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(0, -2, 1);
+            if (ps == PcLink.State.NO_PC) sl.leftMargin = Ui.dp(this, 8);
+            buttons.addView(start, sl);
+        }
+        if (buttons.getChildCount() > 0) card.addView(buttons, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
+
+        divider(card);
+        card.addView(plainSwitch("Начинать трансляцию вместе с игрой", "Открыли игру — экран сразу на ПК",
+                Prefs.get(this, Prefs.AUTO_STREAM, false), on -> Prefs.put(this, Prefs.AUTO_STREAM, on)));
+        divider(card);
+        card.addView(plainSwitch("Останавливать после игры", "Экономит заряд и трафик",
+                Prefs.get(this, Prefs.AUTO_STREAM_STOP, true), on -> Prefs.put(this, Prefs.AUTO_STREAM_STOP, on)));
+        return card;
+    }
+
+    private final PcLink.Listener pcListener = this::render;
+
+    @Override
+    protected void onPause() {
+        PcLink.removeListener(pcListener);
+        super.onPause();
     }
 
     private void section(String title) {

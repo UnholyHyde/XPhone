@@ -69,6 +69,37 @@ public sealed class MainViewModel : Observable, IDisposable
         _restartTimer.Tick += async (_, _) => { _restartTimer.Stop(); await RestartAsync(); };
         _audioTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _audioTimer.Tick += (_, _) => PollAudio();
+
+        // Связь с приложением XPhone на телефоне: оно может само начать и остановить трансляцию.
+        Link = new Sync.PhoneLink(Adb) { StateFor = StateLine };
+        Link.Command += (key, cmd) => _ui.BeginInvoke(() => OnPhoneCommand(key, cmd));
+    }
+
+    public Sync.PhoneLink Link { get; }
+
+    /// <summary>Что сказать телефону о трансляции.</summary>
+    private string StateLine(string key)
+    {
+        var s = Session;
+        if (s == null || s.Device.Key != key) return "STATE idle";
+        return State == ConnState.Connected ? "STATE streaming" : State == ConnState.Connecting ? "STATE connecting" : "STATE idle";
+    }
+
+    private void OnPhoneCommand(string key, string cmd)
+    {
+        if (cmd == "START")
+        {
+            if (Session != null && Session.Device.Key == key && State != ConnState.Idle) return;
+            var item = Devices.Where(x => x.IsReady && x.Device.Key == key).OrderBy(x => x.Device.Transport).FirstOrDefault();
+            if (item == null) return;
+            Selected = item;
+            _suppressAuto = false;
+            Connect();
+        }
+        else if (cmd == "STOP")
+        {
+            if (Session != null && Session.Device.Key == key) _ = DisconnectAsync();
+        }
     }
 
     public void Start()
@@ -131,6 +162,7 @@ public sealed class MainViewModel : Observable, IDisposable
         _selected = null;
         Selected = pick;
         Raise(nameof(NoDevices));
+        Link.Sync(list);
 
         // Запомненного телефона нет совсем — значит, он «ушёл», и при возвращении можно подключаться снова.
         if (Settings.RememberedPhone != null && Devices.All(x => x.Device.HardwareSerial != Settings.RememberedPhone))
@@ -172,7 +204,12 @@ public sealed class MainViewModel : Observable, IDisposable
     public ConnState State
     {
         get => _state;
-        private set { if (Set(ref _state, value)) RaiseState(); }
+        private set
+        {
+            if (!Set(ref _state, value)) return;
+            RaiseState();
+            Link.SendAll(StateLine);
+        }
     }
 
     public bool IsConnected => State == ConnState.Connected;
@@ -309,6 +346,7 @@ public sealed class MainViewModel : Observable, IDisposable
 
         var msg = HumanErrors.ForExit(s.Log, s.Device, _windowShown);
         ShowBanner(msg, s.Log);
+        Link.Send(s.Device.Key, "MSG " + msg.Title);
         // Работало и оборвалось — при «Подключаться автоматически» вернёмся, когда телефон снова появится.
         if (_windowShown) _autoRetries = 0;
         TryAutoConnect();
@@ -683,6 +721,7 @@ public sealed class MainViewModel : Observable, IDisposable
         _saveTimer.Stop();
         SettingsStore.Save(Settings);
         Watcher.Dispose();
+        Link.Dispose();
         Session?.Kill();
         Adb.KillServerIfOurs();
     }

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Связь с XPhone на ПК (через adb, только 127.0.0.1) -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Панель поверх игры -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Узнать, какая игра сейчас открыта -->

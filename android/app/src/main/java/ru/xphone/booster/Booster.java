@@ -25,6 +25,7 @@ public final class Booster {
     public static final String BRIGHT = "bright"; // яркость не меняется сама
     public static final String CLEAN = "clean";   // закрыть фоновые приложения (действие)
     public static final String RES = "res";       // разрешение экрана (открывает настройки)
+    public static final String STREAM = "stream"; // трансляция на ПК (через XPhone на компьютере)
 
     public static final String[] TOGGLES = {DND, PERF, PASS, ANIM, BRIGHT};
     private static final String[] ANIM_KEYS = {
@@ -44,6 +45,7 @@ public final class Booster {
             case BRIGHT: return "Яркость: не менять";
             case CLEAN: return "Очистить фон";
             case RES: return "Разрешение";
+            case STREAM: return "Стрим на ПК";
             default: return id;
         }
     }
@@ -76,6 +78,7 @@ public final class Booster {
             case BRIGHT: return "Автояркость не дёргает экран во время игры";
             case CLEAN: return "Закрыть приложения в фоне";
             case RES: return "Откроет настройки: выберите FHD+ или WQHD+";
+            case STREAM: return "Трансляция экрана и звука на компьютер (нужен XPhone на ПК)";
             default: return "";
         }
     }
@@ -89,13 +92,14 @@ public final class Booster {
             case BRIGHT: return R.drawable.ic_sun_lock;
             case CLEAN: return R.drawable.ic_trash;
             case RES: return R.drawable.ic_monitor;
+            case STREAM: return R.drawable.ic_cast;
             default: return R.drawable.ic_settings;
         }
     }
 
     /** Нужен ли Shizuku. */
     public static boolean needsShizuku(String id) {
-        return !(DND.equals(id) || RES.equals(id));
+        return !(DND.equals(id) || RES.equals(id) || STREAM.equals(id));
     }
 
     /** Есть ли функция на этом телефоне вообще. */
@@ -109,7 +113,7 @@ public final class Booster {
     public static boolean available(Context c, String id) {
         if (!supported(id)) return false;
         if (DND.equals(id)) return Shell.ready(c) || dndAccess(c);
-        if (RES.equals(id)) return true;
+        if (RES.equals(id) || STREAM.equals(id)) return true;
         return Shell.ready(c);
     }
 

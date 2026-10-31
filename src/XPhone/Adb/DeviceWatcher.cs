@@ -74,7 +74,7 @@ public sealed class DeviceWatcher : IDisposable
             {
                 await Task.Delay(5000, ct);
                 bool need = !Paused && (NeedWifiScan?.Invoke() ?? false);
-                if (need && DateTime.UtcNow - _lastWifiScan > TimeSpan.FromSeconds(15))
+                if (need && DateTime.UtcNow - _lastWifiScan > TimeSpan.FromSeconds(5))
                     await ScanWifiAsync(ct);
             }
         }

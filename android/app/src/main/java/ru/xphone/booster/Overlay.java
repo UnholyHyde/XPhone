@@ -183,6 +183,7 @@ public final class Overlay {
 
         // Плитки
         List<String> ids = new ArrayList<>();
+        ids.add(STREAM);
         for (String id : new String[]{Booster.DND, Booster.PERF, Booster.PASS, Booster.ANIM,
                 Booster.BRIGHT, Booster.CLEAN, Booster.RES})
             if (Booster.supported(id)) ids.add(id);
@@ -237,6 +238,7 @@ public final class Overlay {
         panelRoot = root;
         try { wm.addView(root, lp); } catch (Exception e) { panelRoot = null; return; }
 
+        PcLink.addListener(pcListener);
         scroll.setTranslationX(width + dp(24));
         scroll.animate().translationX(0).setDuration(200).setInterpolator(new DecelerateInterpolator()).start();
         refreshTiles();
@@ -244,6 +246,7 @@ public final class Overlay {
 
     public void closePanel() {
         if (panelRoot == null) return;
+        PcLink.removeListener(pcListener);
         try { wm.removeView(panelRoot); } catch (Exception ignored) { }
         panelRoot = null;
         tiles.clear();
@@ -302,6 +305,14 @@ public final class Overlay {
 
     // ── Плитка ────────────────────────────────────────────────────────
 
+    /** Плитка «Стрим на ПК». */
+    private static final String STREAM = "stream";
+
+    private final PcLink.Listener pcListener = () -> {
+        Tile t = tiles.get(STREAM);
+        if (t != null) t.paint();
+    };
+
     private final class Tile {
         final String id;
         final LinearLayout view;
@@ -349,12 +360,20 @@ public final class Overlay {
         }
 
         void paint() {
+            if (STREAM.equals(id)) {
+                PcLink.State s = PcLink.state();
+                on = s == PcLink.State.STREAMING;
+                state.setText(s == PcLink.State.STREAMING ? "Идёт"
+                        : s == PcLink.State.CONNECTING ? "Запуск…"
+                        : s == PcLink.State.IDLE ? "Выкл"
+                        : PcLink.waiting() ? "Ищем ПК…" : "Нет ПК");
+            }
             boolean lit = on && available && !action;
             view.setBackground(Ui.box(ctx, lit ? Ui.ACCENT : Ui.TILE_OFF, lit ? Ui.ACCENT : Ui.LINE, 16));
             Ui.tint(icon, lit ? Ui.ON_ACCENT : Ui.SILVER);
             label.setTextColor(lit ? Ui.ON_ACCENT : Ui.TEXT);
             state.setTextColor(lit ? 0xFF3A3A44 : Ui.MUTED);
-            if (available && !action) state.setText(Booster.stateText(id, on));
+            if (available && !action && !STREAM.equals(id)) state.setText(Booster.stateText(id, on));
             view.setAlpha(available ? 1f : 0.5f);
         }
 
@@ -363,6 +382,19 @@ public final class Overlay {
                 Toast.makeText(ctx, Booster.supported(id)
                         ? "Нужен Shizuku: откройте XPhone на телефоне — там подсказка, как его запустить."
                         : "На этом телефоне такой функции нет.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (STREAM.equals(id)) {
+                if (PcLink.state() == PcLink.State.STREAMING) {
+                    PcLink.requestStop();
+                } else {
+                    PcLink.requestStart(ctx);
+                    if (PcLink.state() == PcLink.State.NO_PC)
+                        Toast.makeText(ctx, Shell.ready(ctx)
+                                ? "Ищем компьютер… Проверьте, что XPhone на ПК открыт."
+                                : "Включите «Отладку по Wi-Fi» (плитка в шторке) и откройте XPhone на ПК.", Toast.LENGTH_LONG).show();
+                }
+                paint();
                 return;
             }
             if (Booster.RES.equals(id)) {

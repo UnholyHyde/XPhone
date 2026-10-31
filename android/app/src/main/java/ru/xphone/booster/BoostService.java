@@ -33,6 +33,7 @@ public class BoostService extends Service {
     private long exitSince;
     private long externalUntil;
     private String launcher;
+    private boolean streamByGame;
 
     public static void start(Context c) {
         Intent i = new Intent(c, BoostService.class);
@@ -52,6 +53,7 @@ public class BoostService extends Service {
         // Если прошлый раз что-то поменяли и не вернули (например, телефон перезагрузился) — вернуть.
         if (Prefs.restore(this) && Booster.hasChanges(this)) Shell.background(() -> Booster.restoreAll(this));
         handler.post(tick);
+        PcLink.start(this);
     }
 
     @Override
@@ -67,6 +69,7 @@ public class BoostService extends Service {
     @Override
     public void onDestroy() {
         handler.removeCallbacks(tick);
+        PcLink.stop();
         if (overlay != null) overlay.hideAll();
         if (currentGame != null && Prefs.restore(this)) Shell.background(() -> Booster.restoreAll(this));
         super.onDestroy();
@@ -115,6 +118,11 @@ public class BoostService extends Service {
                 if (Prefs.auto(this, id) && Booster.available(this, id)) Booster.set(this, id, true, pkg);
             Shell.onMain(overlay::refreshIfOpen);
         });
+        // Трансляция на ПК вместе с игрой.
+        if (!switched && Prefs.get(this, Prefs.AUTO_STREAM, false) && PcLink.state() != PcLink.State.STREAMING) {
+            streamByGame = true;
+            PcLink.requestStart(this);
+        }
         if (Prefs.autoPanel(this) && !switched)
             handler.postDelayed(() -> { if (pkg.equals(currentGame)) overlay.openPanel(); }, 1500);
     }
@@ -124,6 +132,8 @@ public class BoostService extends Service {
         exitSince = 0;
         overlay.hideAll();
         if (Prefs.restore(this)) Shell.background(() -> Booster.restoreAll(this));
+        if (streamByGame && Prefs.get(this, Prefs.AUTO_STREAM_STOP, true)) PcLink.requestStop();
+        streamByGame = false;
     }
 
     /** Какая программа сейчас на экране (по событиям «приложение открыто»). */

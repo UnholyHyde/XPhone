@@ -18,6 +18,10 @@ public final class Prefs {
     public static final String AUTO_PANEL = "auto_panel";
     public static final String RESTORE = "restore";
     public static final String HANDLE_Y = "handle_y";
+    /** Начинать трансляцию на ПК, когда открывается игра. */
+    public static final String AUTO_STREAM = "auto_stream";
+    /** Останавливать трансляцию, когда игра закрыта (если её начала игра). */
+    public static final String AUTO_STREAM_STOP = "auto_stream_stop";
     private static final String ADDED = "games_added";
     private static final String EXCLUDED = "games_excluded";
 
