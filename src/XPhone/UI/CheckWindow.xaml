@@ -1,0 +1,78 @@
+<Window x:Class="XPhone.UI.CheckWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:XPhone.UI"
+        xmlns:d="clr-namespace:XPhone.Diagnostics"
+        Title="Проверка телефона" Width="600" Height="640" MinHeight="420" ResizeMode="CanResizeWithGrip"
+        Style="{StaticResource Window}" Background="{StaticResource Dialog}" WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="22,18">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource Sel}" Margin="0,0,12,0">
+                    <ui:Icon Kind="stethoscope" Size="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="HeadTitle" Text="Проверка телефона" Style="{StaticResource H2}" />
+                    <TextBlock x:Name="HeadText" Text="Смотрим, что включено на телефоне и что мешает." Style="{StaticResource Note}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="22,14">
+            <DockPanel>
+                <Button x:Name="AgainButton" Style="{StaticResource Btn}" Click="Again_Click" AutomationProperties.Name="Проверить ещё раз" DockPanel.Dock="Left">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Icon Kind="refresh-cw" Size="15" Margin="0,0,7,0" />
+                        <TextBlock Text="Проверить ещё раз" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource BtnPrimary}" Content="Готово" Click="Close_Click" IsCancel="True" IsDefault="True"
+                        HorizontalAlignment="Right" MinWidth="110" />
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <StackPanel x:Name="Progress" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ui:Icon x:Name="Spinner" Kind="loader" Size="28" HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <ui:Icon.RenderTransform>
+                        <RotateTransform x:Name="SpinAngle" />
+                    </ui:Icon.RenderTransform>
+                </ui:Icon>
+                <TextBlock x:Name="ProgressText" Text="Проверяем…" Style="{StaticResource Note}" Margin="0,12,0,0" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <ScrollViewer x:Name="ResultsScroll" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <ItemsControl x:Name="Results" Margin="22,18,22,8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="d:CheckItem">
+                            <Border CornerRadius="12" BorderThickness="1" Padding="14,12" Margin="0,0,0,10" Background="{StaticResource Card}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWarn}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource Muted}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:Icon Kind="{Binding Icon}" Size="20" Margin="0,0,12,0" VerticalAlignment="Top" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Text}" Style="{StaticResource Note}" Foreground="#B4B7C0" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>

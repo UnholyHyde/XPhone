@@ -1,0 +1,365 @@
+<Window x:Class="XPhone.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:XPhone.UI"
+        xmlns:s="clr-namespace:XPhone.Settings"
+        Title="XPhone" Width="940" Height="700" MinWidth="820" MinHeight="600"
+        Style="{StaticResource Window}" WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/xphone.ico">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ── Шапка ── -->
+        <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="20,12">
+            <DockPanel LastChildFill="False">
+                <Image Source="pack://application:,,,/Assets/xphone.ico" Width="28" Height="28" DockPanel.Dock="Left" Margin="0,0,10,0"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="XPHONE" FontFamily="{StaticResource Unbounded}" FontSize="17" VerticalAlignment="Center"
+                           DockPanel.Dock="Left" Margin="0,0,16,0" />
+
+                <!-- Значок состояния: белый — подключено, серый — нет (без цвета). -->
+                <Border x:Name="Chip" DockPanel.Dock="Left" Height="30" CornerRadius="15" Padding="12,0" VerticalAlignment="Center">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{StaticResource Sel}" />
+                            <Setter Property="TextElement.Foreground" Value="{StaticResource Muted}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource Accent}" />
+                                    <Setter Property="TextElement.Foreground" Value="{StaticResource OnAccent}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsConnecting}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource Line2}" />
+                                    <Setter Property="TextElement.Foreground" Value="{StaticResource Text}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                 Fill="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=Border}}" />
+                        <TextBlock Text="{Binding StatusTitle}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Check_Click" AutomationProperties.Name="Проверка телефона"
+                        ToolTip="Проверить, что на телефоне всё включено">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Icon Kind="stethoscope" Size="16" Margin="0,0,8,0" />
+                        <TextBlock Text="Проверка телефона" />
+                    </StackPanel>
+                </Button>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ── Левая колонка: телефоны и подключение ── -->
+            <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="20,18,20,18">
+
+                    <!-- Запомнить / автоподключение — внизу -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0">
+                        <CheckBox Style="{StaticResource Check}" IsChecked="{Binding RememberPhone}" Content="Запомнить телефон" />
+                        <CheckBox Style="{StaticResource Check}" IsChecked="{Binding AutoConnect}"
+                                  Content="Подключаться автоматически, когда телефон найден" />
+                        <TextBlock Style="{StaticResource Note}" Text="{Binding RememberedText}" Margin="28,-4,0,0" />
+                    </StackPanel>
+
+                    <!-- Заголовок списка -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <TextBlock Text="ТЕЛЕФОН" Style="{StaticResource GroupTitle}" VerticalAlignment="Center" />
+                    </DockPanel>
+
+                    <!-- Кнопки под списком -->
+                    <StackPanel DockPanel.Dock="Bottom">
+                        <Grid Margin="0,4,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Style="{StaticResource BtnSm}" Click="Refresh_Click" AutomationProperties.Name="Обновить" IsEnabled="{Binding IsRefreshing, Converter={StaticResource Eq}, ConverterParameter=False}"
+                                    ToolTip="Найти телефоны заново (USB и Wi-Fi)">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Icon Kind="refresh-cw" Size="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Обновить" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Style="{StaticResource BtnSm}" Click="Pair_Click" AutomationProperties.Name="Сопряжение по Wi-Fi"
+                                    ToolTip="Один раз связать телефон с компьютером по Wi-Fi">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Icon Kind="wifi" Size="15" Margin="0,0,7,0" />
+                                    <TextBlock Text="Сопряжение по Wi-Fi" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Подключить / Отключить -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Style="{StaticResource BtnBig}" Click="Connect_Click" AutomationProperties.Name="{Binding ConnectText}" IsEnabled="{Binding CanConnect}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Icon Kind="{Binding ConnectIcon}" Size="20" StrokeThickness="2" Margin="0,0,10,0" />
+                                    <TextBlock Text="{Binding ConnectText}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Style="{StaticResource BtnBigSecondary}" Click="Disconnect_Click" AutomationProperties.Name="Отключить"
+                                    IsEnabled="{Binding CanDisconnect}" Padding="16,0" ToolTip="Остановить трансляцию">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Icon Kind="square" Size="16" Margin="0,0,8,0" />
+                                    <TextBlock Text="Отключить" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Строка состояния -->
+                        <StackPanel Margin="2,10,0,0">
+                            <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Note}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding ShowAudioLive, Converter={StaticResource Vis}}">
+                                <ui:Icon Size="15" Margin="0,0,6,0" Foreground="{StaticResource Silver}">
+                                    <ui:Icon.Style>
+                                        <Style TargetType="ui:Icon">
+                                            <Setter Property="Kind" Value="volume-x" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding AudioFlowing}" Value="True">
+                                                    <Setter Property="Kind" Value="volume-2" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Icon.Style>
+                                </ui:Icon>
+                                <TextBlock Text="{Binding AudioLive}" FontSize="12" Foreground="{StaticResource Silver}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Сообщение об ошибке / подсказка -->
+                        <Border Margin="0,12,0,0" CornerRadius="12" BorderThickness="1" Padding="12"
+                                Visibility="{Binding BannerVisible, Converter={StaticResource Vis}}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{StaticResource Card}" />
+                                    <Setter Property="BorderBrush" Value="{StaticResource Line2}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BannerIsError}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{StaticResource Muted}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:Icon Size="18" Margin="0,1,10,0" VerticalAlignment="Top">
+                                    <ui:Icon.Style>
+                                        <Style TargetType="ui:Icon">
+                                            <Setter Property="Kind" Value="info" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BannerIsError}" Value="True">
+                                                    <Setter Property="Kind" Value="triangle-alert" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:Icon.Style>
+                                </ui:Icon>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding BannerTitle}" FontWeight="Bold" FontSize="13" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding BannerHint}" Style="{StaticResource Note}" Foreground="#B4B7C0" Margin="0,4,0,0" />
+                                    <Button Style="{StaticResource BtnLink}" Margin="0,8,0,0" HorizontalAlignment="Left" Click="Details_Click" AutomationProperties.Name="Подробности"
+                                            Visibility="{Binding HasLog, Converter={StaticResource Vis}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Подробности" />
+                                            <ui:Icon Kind="chevron-down" Size="14" Margin="4,1,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBox Style="{StaticResource LogBox}" Margin="0,8,0,0" Text="{Binding BannerLog, Mode=OneWay}"
+                                             Visibility="{Binding ShowDetails, Converter={StaticResource Vis}}" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Style="{StaticResource BtnLink}" Click="CloseBanner_Click" AutomationProperties.Name="Скрыть сообщение" VerticalAlignment="Top"
+                                        ToolTip="Скрыть" Margin="4,-4,-4,0" Padding="4">
+                                    <ui:Icon Kind="x" Size="16" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Список телефонов -->
+                    <Grid>
+                        <ListBox x:Name="DeviceList" ItemsSource="{Binding Devices}" SelectedItem="{Binding Selected}"
+                                 Background="Transparent" BorderThickness="0" Padding="0" Foreground="{StaticResource Text}"
+                                 ItemContainerStyle="{StaticResource DeviceItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 MouseDoubleClick="DeviceList_MouseDoubleClick">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="ui:DeviceItem">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource Sel}" Margin="0,0,12,0">
+                                            <ui:Icon Kind="{Binding Icon}" Size="20" Foreground="{StaticResource Silver}"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <Border Margin="8,0,0,0" Padding="7,1" CornerRadius="9" BorderBrush="{StaticResource Line3}" BorderThickness="1"
+                                                        VerticalAlignment="Center" Visibility="{Binding IsRemembered, Converter={StaticResource Vis}}">
+                                                    <TextBlock Text="запомнен" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Silver}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Пусто -->
+                        <Border VerticalAlignment="Top" CornerRadius="12" BorderBrush="{StaticResource Dash}" BorderThickness="1" Padding="14"
+                                Visibility="{Binding NoDevices, Converter={StaticResource Vis}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <ui:Icon Kind="smartphone" Size="18" Foreground="{StaticResource Muted}" Margin="0,0,8,0" />
+                                    <TextBlock Text="Телефон не найден" FontWeight="SemiBold" Foreground="{StaticResource Silver}" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource Note}"
+                                           Text="Подключите телефон кабелем или сделайте «Сопряжение по Wi-Fi». Если телефон подключён, а его нет — нажмите «Проверка телефона»." />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </Border>
+
+            <!-- ── Правая колонка: настройки ── -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+                <StackPanel Margin="28,22,28,24" MaxWidth="560" HorizontalAlignment="Left">
+
+                    <TextBlock Text="{Binding ProfileOwner}" Style="{StaticResource Note}" Margin="0,0,0,14" />
+
+                    <!-- Картинка -->
+                    <TextBlock Text="Картинка" Style="{StaticResource H2}" Margin="0,0,0,14" />
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Качество" Style="{StaticResource Label}" />
+                            <ComboBox Style="{StaticResource Select}" SelectedValuePath="Tag" SelectedValue="{Binding Quality}">
+                                <ComboBoxItem Content="720p" Tag="{x:Static s:QualityMode.P720}" />
+                                <ComboBoxItem Content="1080p" Tag="{x:Static s:QualityMode.P1080}" />
+                                <ComboBoxItem Content="Своё значение" Tag="{x:Static s:QualityMode.Custom}" />
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Visibility="{Binding IsCustom, Converter={StaticResource Vis}}">
+                            <TextBlock Text="Высота картинки, точек (240–2160)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="CustomBox" Style="{StaticResource Input}" MaxLength="4"
+                                     Text="{Binding CustomLines, UpdateSourceTrigger=LostFocus}" KeyDown="CustomBox_KeyDown"
+                                     PreviewTextInput="Digits_PreviewTextInput" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Style="{StaticResource CardBox}" Padding="12,10" Margin="0,-4,0,16"
+                            Visibility="{Binding HasQualityLimitNote, Converter={StaticResource Vis}}">
+                        <DockPanel>
+                            <ui:Icon Kind="info" Size="16" Margin="0,1,10,0" VerticalAlignment="Top" Foreground="{StaticResource Silver}" />
+                            <TextBlock Text="{Binding QualityLimitNote}" Style="{StaticResource Note}" Foreground="#B4B7C0" />
+                        </DockPanel>
+                    </Border>
+
+                    <TextBlock Text="Кадров в секунду (FPS)" Style="{StaticResource Label}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <RadioButton Style="{StaticResource Seg}" Content="30" GroupName="fps" IsChecked="{Binding Fps, Converter={StaticResource Eq}, ConverterParameter=30}" />
+                        <RadioButton Style="{StaticResource Seg}" Content="60" GroupName="fps" IsChecked="{Binding Fps, Converter={StaticResource Eq}, ConverterParameter=60}" />
+                        <RadioButton Style="{StaticResource Seg}" Content="90" GroupName="fps" IsChecked="{Binding Fps, Converter={StaticResource Eq}, ConverterParameter=90}" />
+                        <RadioButton Style="{StaticResource Seg}" Content="120" GroupName="fps" IsChecked="{Binding Fps, Converter={StaticResource Eq}, ConverterParameter=120}" />
+                    </StackPanel>
+
+                    <DockPanel Margin="0,0,0,2">
+                        <TextBlock Text="Битрейт" Style="{StaticResource Label}" />
+                        <TextBlock Text="{Binding BitrateText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Text}"
+                                   HorizontalAlignment="Right" />
+                    </DockPanel>
+                    <Slider Style="{StaticResource Range}" Minimum="0" Maximum="40" SmallChange="1" LargeChange="4"
+                            IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Bitrate, Delay=250}" />
+                    <TextBlock Style="{StaticResource Note}" Margin="0,2,0,16"
+                               Text="Влево до упора — «Авто». Больше — чётче картинка, но нужен хороший кабель или Wi-Fi." />
+
+                    <!-- Проверка Wi-Fi: только для телефона по Wi-Fi -->
+                    <Border Style="{StaticResource CardBox}" Margin="0,-4,0,16" Visibility="{Binding ShowWifiTest, Converter={StaticResource Vis}}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource BtnSm}" Click="SpeedTest_Click" IsEnabled="{Binding CanRunSpeed}"
+                                        AutomationProperties.Name="Проверить Wi-Fi" MinWidth="150">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:Icon Kind="zap" Size="14" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding SpeedButtonText}" />
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Icon Kind="wifi" Size="16" Margin="0,0,8,0" Foreground="{StaticResource Silver}" />
+                                    <TextBlock Text="Скорость Wi-Fi" FontWeight="SemiBold" FontSize="13" />
+                                </StackPanel>
+                            </DockPanel>
+                            <TextBlock Text="{Binding SpeedText}" Style="{StaticResource Note}" Foreground="#B4B7C0" Margin="0,8,0,0"
+                                       Visibility="{Binding HasSpeedText, Converter={StaticResource Vis}}" />
+                            <Button Style="{StaticResource BtnSm}" Click="ApplySpeed_Click" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                    Content="{Binding ApplySpeedText}" Visibility="{Binding CanApplySpeed, Converter={StaticResource Vis}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding LowLatency}" Margin="0,0,0,26">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Icon Kind="zap" Size="16" Margin="0,0,8,0" Foreground="{StaticResource Silver}" />
+                                <TextBlock Text="Минимальная задержка" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Note}" Margin="0,3,0,0"
+                                       Text="Меньше буфер видео и звука. На слабом Wi-Fi возможны рывки и щелчки звука." />
+                        </StackPanel>
+                    </CheckBox>
+
+                    <!-- Звук -->
+                    <TextBlock Text="Звук" Style="{StaticResource H2}" Margin="0,0,0,14" />
+                    <ComboBox Style="{StaticResource Select}" SelectedValuePath="Tag" SelectedValue="{Binding Audio}" MaxWidth="360" HorizontalAlignment="Left" MinWidth="300">
+                        <ComboBoxItem Content="Только на ПК (телефон молчит)" Tag="{x:Static s:AudioMode.PcOnly}" />
+                        <ComboBoxItem Content="И на ПК, и на телефоне" Tag="{x:Static s:AudioMode.Both}" />
+                        <ComboBoxItem Content="Без звука" Tag="{x:Static s:AudioMode.Off}" />
+                    </ComboBox>
+                    <TextBlock Text="{Binding AudioNote}" Style="{StaticResource Note}" Margin="0,8,0,26" />
+
+                    <!-- Дополнительно -->
+                    <TextBlock Text="Дополнительно" Style="{StaticResource H2}" Margin="0,0,0,14" />
+                    <CheckBox Style="{StaticResource Check}" IsChecked="{Binding TurnScreenOff}" Content="Выключить экран телефона во время трансляции" />
+                    <CheckBox Style="{StaticResource Check}" IsChecked="{Binding StayAwake}" Content="Не давать телефону засыпать" />
+                    <CheckBox Style="{StaticResource Check}" IsChecked="{Binding Borderless}" Content="Окно без рамки (удобно для OBS)" />
+                    <CheckBox Style="{StaticResource Check}" IsChecked="{Binding AlwaysOnTop}" Content="Окно поверх всех" />
+
+                    <TextBlock Text="Название окна (по нему OBS находит окно)" Style="{StaticResource Label}" Margin="0,6,0,6" />
+                    <TextBox Style="{StaticResource Input}" MaxLength="80" Text="{Binding WindowTitle, UpdateSourceTrigger=LostFocus}"
+                             KeyDown="CustomBox_KeyDown" MaxWidth="360" HorizontalAlignment="Stretch" />
+                    <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
+                               Text="В OBS: «Захват окна» → выберите окно с этим названием. Окно без рамки не перетаскивается: снимите галочку, передвиньте окно и включите снова — место сохранится." />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

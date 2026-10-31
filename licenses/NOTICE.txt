@@ -1,0 +1,25 @@
+XPhone использует сторонние программы и материалы
+=================================================
+
+scrcpy v5.0.1 — https://github.com/Genymobile/scrcpy
+  Copyright (C) 2018 Genymobile
+  Copyright (C) 2018-2026 Romain Vimont
+  Лицензия: Apache License 2.0 (текст — scrcpy-LICENSE.txt).
+  XPhone не изменяет scrcpy: программа лежит в папке tools/ в том виде,
+  в каком её выпускают авторы (официальная сборка scrcpy-win64-v5.0.1.zip).
+
+  Вместе со scrcpy поставляются (папка tools/):
+  - Android Debug Bridge (adb), AdbWinApi.dll, AdbWinUsbApi.dll — Android SDK
+    Platform-Tools, Apache License 2.0 (The Android Open Source Project).
+  - FFmpeg (avcodec, avformat, avutil, swresample) — LGPL 2.1 или новее.
+  - SDL3 — zlib License.
+  - libusb — LGPL 2.1.
+
+Иконки Lucide — https://lucide.dev, лицензия ISC (lucide-LICENSE.txt).
+
+Шрифты Manrope и Unbounded — SIL Open Font License 1.1
+  (OFL-Manrope.txt, OFL-Unbounded.txt).
+
+QRCoder 1.8.1 — https://github.com/Shane32/QRCoder, лицензия MIT
+  (рисует QR-код для сопряжения по Wi-Fi). Copyright (c) Raffael Herrmann и участники проекта.
+
