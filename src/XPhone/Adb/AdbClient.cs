@@ -31,7 +31,9 @@ public sealed class AdbClient
     {
         ToolsDir = toolsDir;
         AdbPath = Path.Combine(toolsDir, "adb.exe");
-        ScrcpyPath = Path.Combine(toolsDir, "scrcpy.exe");
+        // В готовой сборке scrcpy переименован и подписан как «XPhone — экран телефона» (см. build.ps1).
+        var branded = Path.Combine(toolsDir, "xphone-screen.exe");
+        ScrcpyPath = File.Exists(branded) ? branded : Path.Combine(toolsDir, "scrcpy.exe");
     }
 
     public static AdbClient FromAppFolder() => new(Path.Combine(AppContext.BaseDirectory, "tools"));

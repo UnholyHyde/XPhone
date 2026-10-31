@@ -75,7 +75,9 @@ public sealed class ScrcpySession
         foreach (var a in Args) psi.ArgumentList.Add(a);
         psi.Environment["ADB"] = _adb.AdbPath;
         psi.Environment["SCRCPY_SERVER_PATH"] = Path.Combine(_adb.ToolsDir, "scrcpy-server");
-        psi.Environment["SCRCPY_ICON_PATH"] = Path.Combine(_adb.ToolsDir, "scrcpy.png");
+        // Значок окна и картинка «связь потеряна» — XPhone, а не scrcpy.
+        var branding = Path.Combine(AppContext.BaseDirectory, "branding");
+        psi.Environment["SCRCPY_ICON_DIR"] = Directory.Exists(branding) ? branding : _adb.ToolsDir;
 
         Append("> scrcpy " + string.Join(" ", Args));
         var p = new Process { StartInfo = psi, EnableRaisingEvents = true };

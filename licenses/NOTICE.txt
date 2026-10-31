@@ -5,8 +5,12 @@ scrcpy v5.0.1 — https://github.com/Genymobile/scrcpy
   Copyright (C) 2018 Genymobile
   Copyright (C) 2018-2026 Romain Vimont
   Лицензия: Apache License 2.0 (текст — scrcpy-LICENSE.txt).
-  XPhone не изменяет scrcpy: программа лежит в папке tools/ в том виде,
-  в каком её выпускают авторы (официальная сборка scrcpy-win64-v5.0.1.zip).
+  В исходниках XPhone scrcpy лежит в папке tools/ без изменений
+  (официальная сборка scrcpy-win64-v5.0.1.zip).
+  ИЗМЕНЕНИЕ (Apache 2.0, п. 4b): в готовой программе tools/xphone-screen.exe — это scrcpy.exe,
+  у которого заменены только значок и описание файла («XPhone — экран телефона»).
+  Код scrcpy не менялся. Значки окна трансляции (папка branding/) нарисованы для XPhone.
+  Для замены значка используется rcedit (https://github.com/electron/rcedit, MIT) — только при сборке.
 
   Вместе со scrcpy поставляются (папка tools/):
   - Android Debug Bridge (adb), AdbWinApi.dll, AdbWinUsbApi.dll — Android SDK
