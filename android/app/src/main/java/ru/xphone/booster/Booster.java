@@ -60,6 +60,18 @@ public final class Booster {
         }
     }
 
+    /** Совсем короткое название — для круглых кнопок темы «Стекло». */
+    public static String tinyTitle(String id) {
+        switch (id) {
+            case DND: return "Тишина";
+            case PASS: return "USB";
+            case ANIM: return "Анимации";
+            case RES: return "Экран";
+            case STREAM: return "Стрим";
+            default: return shortTitle(id);
+        }
+    }
+
     /** Подпись состояния на плитке. */
     public static String stateText(String id, boolean on) {
         switch (id) {

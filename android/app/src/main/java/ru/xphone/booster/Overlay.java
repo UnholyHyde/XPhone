@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.os.Build;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -26,20 +27,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Язычок у правого края и выезжающая панель поверх игры. */
+/**
+ * Всё, что поверх игры: язычок у края, панель, приветствие, кнопка микрофона, короткие сообщения.
+ * Показывает только то, что есть на этом телефоне.
+ */
 public final class Overlay {
     private final Context ctx;
     private final WindowManager wm;
-    private View handle;
-    private WindowManager.LayoutParams handleLp;
+    private View handle, micBubble, toastView, welcomeView;
+    private WindowManager.LayoutParams handleLp, micLp;
     private FrameLayout panelRoot;
+    private LinearLayout dndRow;
     private String gamePkg;
     private final Map<String, Tile> tiles = new HashMap<>();
     private TextView infoText;
 
-    /** Панель открыла другое окно (настройки) — не считать это выходом из игры. */
-    public interface Listener { void openedExternal(); }
+    /** Что панель просит у службы. */
+    public interface Listener {
+        /** Панель открыла другое окно (настройки) — не считать это выходом из игры. */
+        void openedExternal();
+        /** «Скрыть до перезахода». */
+        void hideUntilExit();
+    }
     private final Listener listener;
+
+    private static final String STREAM = Booster.STREAM, MIC = "mic";
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
 
     public Overlay(Context ctx, Listener listener) {
         this.ctx = ctx;
@@ -47,15 +60,13 @@ public final class Overlay {
         this.wm = ctx.getSystemService(WindowManager.class);
     }
 
-    public boolean canShow() {
-        return Settings.canDrawOverlays(ctx);
-    }
+    public boolean canShow() { return Settings.canDrawOverlays(ctx); }
 
     private int dp(float v) { return Ui.dp(ctx, v); }
 
     private Point screen() {
         Point p = new Point();
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
+        if (Build.VERSION.SDK_INT >= 30) {
             android.graphics.Rect b = wm.getCurrentWindowMetrics().getBounds();
             p.set(b.width(), b.height());
         } else {
@@ -71,24 +82,33 @@ public final class Overlay {
         return lp;
     }
 
+    private boolean left() { return Prefs.handleLeft(ctx); }
+
+    private void remove(View v) {
+        if (v == null) return;
+        try { wm.removeView(v); } catch (Exception ignored) { }
+    }
+
     // ── Язычок ────────────────────────────────────────────────────────
 
     @SuppressLint("ClickableViewAccessibility")
     public void showHandle(String pkg) {
         gamePkg = pkg;
-        if (!canShow()) return;
-        if (handle != null) return;
+        if (!canShow() || handle != null) return;
+        Ui.load(ctx);
+        boolean left = left();
 
         FrameLayout h = new FrameLayout(ctx);
         View pill = new View(ctx);
-        pill.setBackground(Ui.box(ctx, 0xB3FFFFFF, 0x66000000, 3));
-        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(dp(5), dp(64), Gravity.CENTER_VERTICAL | Gravity.END);
-        pl.rightMargin = dp(3);
+        pill.setBackground(Ui.box(ctx, Ui.GLASS ? 0xCCFFFFFF : 0xB3FFFFFF, 0x66000000, 3));
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(dp(5), dp(64),
+                Gravity.CENTER_VERTICAL | (left ? Gravity.START : Gravity.END));
+        if (left) pl.leftMargin = dp(3); else pl.rightMargin = dp(3);
         h.addView(pill, pl);
 
         handleLp = baseLp(dp(22), dp(96),
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-        handleLp.gravity = Gravity.TOP | Gravity.END;
+        handleLp.gravity = Gravity.TOP | (left ? Gravity.START : Gravity.END);
         handleLp.y = Math.round(screen().y * Prefs.handleY(ctx));
 
         final float[] down = new float[3];
@@ -97,84 +117,277 @@ public final class Overlay {
                 case MotionEvent.ACTION_DOWN:
                     down[0] = e.getRawX(); down[1] = e.getRawY(); down[2] = handleLp.y;
                     return true;
-                case MotionEvent.ACTION_MOVE:
+                case MotionEvent.ACTION_MOVE: {
+                    // Вертикально — двигаем язычок. Свайп к центру решаем при отпускании:
+                    // короткий — открыть панель, через середину экрана — перенести язычок на другую сторону.
                     float dx = e.getRawX() - down[0], dy = e.getRawY() - down[1];
-                    if (dx < -dp(18) && Math.abs(dx) > Math.abs(dy)) {
-                        down[0] = Float.MAX_VALUE; // уже открыли
-                        openPanel();
-                    } else if (down[0] != Float.MAX_VALUE && Math.abs(dy) > dp(12)) {
-                        // Тянем вверх-вниз — переставить язычок.
+                    if (Math.abs(dy) > dp(12) && Math.abs(dy) > Math.abs(dx)) {
                         handleLp.y = Math.max(0, Math.round(down[2] + dy));
                         wm.updateViewLayout(h, handleLp);
                     }
                     return true;
-                case MotionEvent.ACTION_UP:
-                    float tx = Math.abs(e.getRawX() - down[0]), ty = Math.abs(e.getRawY() - down[1]);
-                    if (down[0] != Float.MAX_VALUE && tx < dp(8) && ty < dp(8)) openPanel();
-                    else if (ty >= dp(12)) Prefs.setHandleY(ctx, handleLp.y / (float) screen().y);
+                }
+                case MotionEvent.ACTION_UP: {
+                    float dx = e.getRawX() - down[0], dy = e.getRawY() - down[1];
+                    float inward = left ? dx : -dx;
+                    boolean crossed = left ? e.getRawX() > screen().x / 2f : e.getRawX() < screen().x / 2f;
+                    if (crossed && Math.abs(dx) > Math.abs(dy)) {
+                        // Протащили через середину экрана — язычок переезжает на другую сторону.
+                        setSide(!left);
+                    } else if (inward > dp(18) && Math.abs(dx) > Math.abs(dy)) {
+                        openPanel();
+                    } else if (Math.abs(dx) < dp(8) && Math.abs(dy) < dp(8)) {
+                        openPanel();
+                    } else if (Math.abs(dy) >= dp(12)) {
+                        Prefs.setHandleY(ctx, handleLp.y / (float) screen().y);
+                    }
                     return true;
+                }
             }
             return false;
         });
         handle = h;
         try { wm.addView(h, handleLp); } catch (Exception e) { handle = null; }
+        if (Prefs.get(ctx, Prefs.MIC_BUBBLE, false)) showMicBubble();
+    }
+
+    /** Перенести язычок (и панель) на другую сторону экрана. */
+    public void setSide(boolean leftSide) {
+        Prefs.put(ctx, Prefs.HANDLE_LEFT, leftSide);
+        String pkg = gamePkg;
+        boolean wasOpen = panelRoot != null;
+        closePanel();
+        remove(handle);
+        handle = null;
+        showHandle(pkg);
+        toast(leftSide ? "Язычок теперь слева" : "Язычок теперь справа", R.drawable.ic_side);
+        if (wasOpen) openPanel();
     }
 
     public void hideAll() {
         closePanel();
-        if (handle != null) {
-            try { wm.removeView(handle); } catch (Exception ignored) { }
-            handle = null;
-        }
+        remove(handle);
+        handle = null;
+        hideMicBubble();
+        remove(welcomeView);
+        welcomeView = null;
         gamePkg = null;
     }
 
     public boolean isPanelOpen() { return panelRoot != null; }
 
+    // ── Приветствие ───────────────────────────────────────────────────
+
+    /** Короткое приветствие у язычка вместо сразу открытой панели. */
+    public void welcome() {
+        android.util.Log.i("XPhone", "welcome canShow=" + canShow());
+        if (!canShow()) return;
+        Ui.load(ctx);
+        remove(welcomeView);
+        boolean left = left();
+        LinearLayout pill = new LinearLayout(ctx);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        pill.setPadding(dp(14), dp(10), dp(16), dp(10));
+        pill.setBackground(Ui.box(ctx, Ui.GLASS ? 0xE6141820 : Ui.PANEL, Ui.LINE2, 999));
+        ImageView logo = Ui.icon(ctx, R.drawable.ic_gamepad, 20, Ui.ACCENT);
+        pill.addView(logo);
+        LinearLayout texts = new LinearLayout(ctx);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setPadding(dp(10), 0, 0, 0);
+        texts.addView(Ui.text(ctx, "XPHONE", 13, Ui.TEXT, 800));
+        texts.addView(Ui.text(ctx, "Свайп от края — панель", 11, Ui.MUTED, 500), Ui.lpMargins(ctx, -2, -2, 0, 3, 0, 0));
+        pill.addView(texts);
+
+        WindowManager.LayoutParams lp = baseLp(-2, -2,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        lp.gravity = Gravity.TOP | (left ? Gravity.START : Gravity.END);
+        lp.x = dp(28);
+        lp.y = Math.round(screen().y * Prefs.handleY(ctx)) + dp(22);
+        welcomeView = pill;
+        try { wm.addView(pill, lp); } catch (Exception e) { android.util.Log.w("XPhone", "welcome failed", e); welcomeView = null; return; }
+        float from = (left ? -1 : 1) * dp(80);
+        pill.setAlpha(0f);
+        pill.setTranslationX(from);
+        pill.animate().alpha(1f).translationX(0).setDuration(320).setInterpolator(new DecelerateInterpolator()).start();
+        // Время показа — обычным таймером: при выключенных анимациях (в игре) они заканчиваются мгновенно.
+        MAIN.postDelayed(() -> pill.animate().alpha(0f).translationX(from).setDuration(260).start(), 2200);
+        MAIN.postDelayed(() -> { remove(pill); if (welcomeView == pill) welcomeView = null; }, 2500);
+        // Язычок «подмигивает», чтобы было видно, где он.
+        if (handle != null) {
+            handle.animate().scaleY(1.35f).setDuration(220).withEndAction(() ->
+                    handle.animate().scaleY(1f).setDuration(220).start()).start();
+        }
+    }
+
+    // ── Короткие сообщения ────────────────────────────────────────────
+
+    /** Сообщение сверху по центру на пару секунд («Не беспокоить включено» и т. п.). */
+    public void toast(String text, int icon) {
+        if (!canShow()) return;
+        Ui.load(ctx);
+        remove(toastView);
+        LinearLayout pill = new LinearLayout(ctx);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        pill.setPadding(dp(14), dp(9), dp(16), dp(9));
+        pill.setBackground(Ui.box(ctx, Ui.GLASS ? 0xE6141820 : 0xFFFFFFFF, Ui.GLASS ? Ui.LINE2 : 0, 999));
+        int fg = Ui.GLASS ? Ui.TEXT : 0xFF0B0B0E;
+        pill.addView(Ui.icon(ctx, icon, 16, Ui.GLASS ? Ui.ACCENT : fg));
+        TextView t = Ui.text(ctx, text, 13, fg, 700);
+        t.setPadding(dp(8), 0, 0, 0);
+        pill.addView(t);
+        WindowManager.LayoutParams lp = baseLp(-2, -2,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+        lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        lp.y = dp(18);
+        toastView = pill;
+        try { wm.addView(pill, lp); } catch (Exception e) { toastView = null; return; }
+        pill.setAlpha(0f);
+        pill.setTranslationY(-dp(16));
+        pill.animate().alpha(1f).translationY(0).setDuration(220).start();
+        MAIN.postDelayed(() -> pill.animate().alpha(0f).setDuration(250).start(), 2500);
+        MAIN.postDelayed(() -> { remove(pill); if (toastView == pill) toastView = null; }, 2800);
+    }
+
+    // ── Кнопка микрофона ──────────────────────────────────────────────
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void showMicBubble() {
+        if (!canShow() || micBubble != null || !Mic.supported(ctx)) return;
+        Ui.load(ctx);
+        FrameLayout b = new FrameLayout(ctx);
+        ImageView ic = Ui.icon(ctx, Mic.muted() ? R.drawable.ic_mic_off : R.drawable.ic_mic, 22, Ui.TEXT);
+        b.addView(ic, new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
+        paintMic(b, ic);
+
+        micLp = baseLp(dp(52), dp(52), WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        micLp.gravity = Gravity.TOP | Gravity.START;
+        Point s = screen();
+        micLp.x = Math.round(Prefs.getFloat(ctx, "mic_x", left() ? 0.9f : 0.03f) * s.x);
+        micLp.y = Math.round(Prefs.getFloat(ctx, "mic_y", 0.45f) * s.y);
+
+        final float[] down = new float[4];
+        b.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    down[0] = e.getRawX(); down[1] = e.getRawY(); down[2] = micLp.x; down[3] = micLp.y;
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    if (Math.abs(e.getRawX() - down[0]) > dp(6) || Math.abs(e.getRawY() - down[1]) > dp(6)) {
+                        micLp.x = Math.round(down[2] + e.getRawX() - down[0]);
+                        micLp.y = Math.round(down[3] + e.getRawY() - down[1]);
+                        wm.updateViewLayout(b, micLp);
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    if (Math.abs(e.getRawX() - down[0]) < dp(6) && Math.abs(e.getRawY() - down[1]) < dp(6)) {
+                        toggleMic(b, ic);
+                    } else {
+                        Point p = screen();
+                        Prefs.putFloat(ctx, "mic_x", micLp.x / (float) p.x);
+                        Prefs.putFloat(ctx, "mic_y", micLp.y / (float) p.y);
+                    }
+                    return true;
+            }
+            return false;
+        });
+        micBubble = b;
+        try { wm.addView(b, micLp); } catch (Exception e) { micBubble = null; }
+    }
+
+    public void hideMicBubble() {
+        remove(micBubble);
+        micBubble = null;
+    }
+
+    private void paintMic(View b, ImageView ic) {
+        boolean m = Mic.muted();
+        if (Ui.GLASS) b.setBackground(Ui.circle(m ? Ui.ACCENT : 0xB3141820));
+        else {
+            android.graphics.drawable.GradientDrawable d = Ui.circle(m ? 0xFFFFFFFF : 0xD90B0B0E);
+            d.setStroke(dp(1), 0xFF3A3A44);
+            b.setBackground(d);
+        }
+        ic.setImageDrawable(ctx.getDrawable(m ? R.drawable.ic_mic_off : R.drawable.ic_mic).mutate());
+        Ui.tint(ic, m ? Ui.ON_ACCENT : Ui.TEXT);
+        b.setContentDescription(m ? "Микрофон выключен" : "Микрофон включён");
+    }
+
+    private void toggleMic(View b, ImageView ic) {
+        final boolean target = !Mic.muted();
+        Shell.background(() -> {
+            boolean ok = Mic.set(ctx, target);
+            Shell.onMain(() -> {
+                paintMic(b, ic);
+                if (ok) toast(target ? "Микрофон выключен" : "Микрофон включён", target ? R.drawable.ic_mic_off : R.drawable.ic_mic);
+                else toast("Не получилось переключить микрофон", R.drawable.ic_alert);
+                Tile t = tiles.get(MIC);
+                if (t != null) t.paint();
+            });
+        });
+    }
+
     // ── Панель ────────────────────────────────────────────────────────
+
+    /** Какие плитки показывать: только то, что есть и работает на этом телефоне. */
+    private List<String> visibleTiles(int[] lockedOut) {
+        List<String> ids = new ArrayList<>();
+        int locked = 0;
+        ids.add(STREAM);
+        if (Mic.supported(ctx)) ids.add(MIC);
+        else if (Build.VERSION.SDK_INT >= 31) locked++;
+        for (String id : new String[]{Booster.DND, Booster.PERF, Booster.PASS, Booster.ANIM, Booster.BRIGHT, Booster.CLEAN, Booster.RES}) {
+            if (!Booster.supported(id)) continue;            // такой функции на телефоне нет — не показываем
+            if (Booster.available(ctx, id)) ids.add(id);
+            else locked++;                                    // есть, но нужен Shizuku
+        }
+        lockedOut[0] = locked;
+        return ids;
+    }
 
     public void openPanel() {
         if (!canShow() || panelRoot != null) return;
+        Ui.load(ctx);
         boolean landscape = ctx.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        boolean left = left();
         Point s = screen();
 
         FrameLayout root = new FrameLayout(ctx);
-        root.setBackgroundColor(0x59000000);
+        root.setBackgroundColor(Ui.SCRIM);
         root.setOnClickListener(v -> closePanel());
 
         LinearLayout panel = new LinearLayout(ctx);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setBackground(Ui.box(ctx, Ui.PANEL, Ui.LINE2, 24));
-        panel.setPadding(dp(16), dp(14), dp(16), dp(16));
-        panel.setClickable(true); // нажатия внутри панели не закрывают её
-        panel.setElevation(dp(12));
+        boolean blur = Ui.GLASS && Build.VERSION.SDK_INT >= 31 && wm.isCrossWindowBlurEnabled();
+        panel.setBackground(Ui.box(ctx, Ui.GLASS ? (blur ? Ui.PANEL : 0xEB141820) : Ui.PANEL, Ui.GLASS ? Ui.LINE2 : Ui.LINE2, Ui.R_PANEL));
+        panel.setPadding(dp(16), dp(14), dp(16), dp(14));
+        panel.setClickable(true);
+        if (!Ui.GLASS) panel.setElevation(dp(12));
 
-        // Шапка: значок, название, игра, закрыть
+        // Шапка
         LinearLayout head = new LinearLayout(ctx);
-        head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView logo = Ui.icon(ctx, R.drawable.ic_gamepad, 20, Ui.TEXT);
-        head.addView(logo);
+        head.addView(Ui.icon(ctx, R.drawable.ic_gamepad, 20, Ui.GLASS ? Ui.ACCENT : Ui.TEXT));
         LinearLayout titles = new LinearLayout(ctx);
         titles.setOrientation(LinearLayout.VERTICAL);
         titles.setPadding(dp(10), 0, dp(8), 0);
-        titles.addView(Ui.text(ctx, "XPHONE", 14, Ui.TEXT, 800));
+        titles.addView(Ui.text(ctx, Ui.GLASS ? "XPhone" : "XPHONE", Ui.GLASS ? 15 : 14, Ui.TEXT, 800));
         TextView game = Ui.text(ctx, appName(gamePkg), 12, Ui.MUTED, 500);
         game.setSingleLine(true);
         titles.addView(game, Ui.lpMargins(ctx, -2, -2, 0, 3, 0, 0));
         head.addView(titles, new LinearLayout.LayoutParams(0, -2, 1));
-        ImageView close = Ui.icon(ctx, R.drawable.ic_x, 20, Ui.MUTED);
-        close.setPadding(dp(4), dp(4), dp(4), dp(4));
-        close.setLayoutParams(new LinearLayout.LayoutParams(dp(32), dp(32)));
+        FrameLayout close = new FrameLayout(ctx);
+        close.setBackground(Ui.GLASS ? Ui.circle(0x1AFFFFFF) : Ui.box(ctx, 0, Ui.LINE2, 9));
+        close.addView(Ui.icon(ctx, R.drawable.ic_x, 16, Ui.SILVER), new FrameLayout.LayoutParams(dp(16), dp(16), Gravity.CENTER));
+        close.setContentDescription("Закрыть");
         close.setOnClickListener(v -> closePanel());
-        head.addView(close);
+        head.addView(close, new LinearLayout.LayoutParams(dp(32), dp(32)));
         panel.addView(head);
 
         // Нагрев и батарея
         infoText = Ui.text(ctx, "…", 12, Ui.SILVER, 600);
         LinearLayout infoRow = new LinearLayout(ctx);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
-        infoRow.setBackground(Ui.box(ctx, Ui.CARD, Ui.LINE, 12));
+        infoRow.setBackground(Ui.box(ctx, Ui.CARD, Ui.LINE, Ui.GLASS ? 999 : 12));
         infoRow.setPadding(dp(12), dp(9), dp(12), dp(9));
         infoRow.addView(Ui.icon(ctx, R.drawable.ic_thermo, 16, Ui.SILVER));
         infoRow.addView(infoText, Ui.lpMargins(ctx, -2, -2, 8, 0, 0, 0));
@@ -182,73 +395,144 @@ public final class Overlay {
         updateInfo();
 
         // Плитки
-        List<String> ids = new ArrayList<>();
-        ids.add(STREAM);
-        for (String id : new String[]{Booster.DND, Booster.PERF, Booster.PASS, Booster.ANIM,
-                Booster.BRIGHT, Booster.CLEAN, Booster.RES})
-            if (Booster.supported(id)) ids.add(id);
-        int cols = landscape ? 4 : 3;
+        int[] locked = new int[1];
+        List<String> ids = visibleTiles(locked);
+        int cols = Ui.GLASS ? (landscape ? 5 : 4) : (landscape ? 4 : 3);
         tiles.clear();
         LinearLayout grid = new LinearLayout(ctx);
         grid.setOrientation(LinearLayout.VERTICAL);
         LinearLayout row = null;
+        int tileH = Ui.GLASS ? 98 : 88;
         for (int i = 0; i < ids.size(); i++) {
             if (i % cols == 0) {
                 row = new LinearLayout(ctx);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                grid.addView(row, Ui.lpMargins(ctx, -1, -2, 0, i == 0 ? 0 : 8, 0, 0));
+                grid.addView(row, Ui.lpMargins(ctx, -1, -2, 0, i == 0 ? 0 : (Ui.GLASS ? 6 : 8), 0, 0));
             }
             Tile t = new Tile(ids.get(i));
             tiles.put(t.id, t);
-            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, dp(92), 1);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, dp(tileH), 1);
             if (i % cols != 0) tl.leftMargin = dp(8);
             row.addView(t.view, tl);
         }
-        // Пустые места в последнем ряду, чтобы плитки были одного размера.
         int rest = ids.size() % cols;
         if (rest != 0 && row != null) for (int i = rest; i < cols; i++) {
-            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, dp(92), 1);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, dp(tileH), 1);
             tl.leftMargin = dp(8);
             row.addView(new View(ctx), tl);
         }
         panel.addView(grid);
 
-        // Подсказка, если Shizuku не работает
-        if (!Shell.ready(ctx)) {
-            TextView hint = Ui.text(ctx, "Плитки с замком откроются, когда запущен Shizuku. Нажмите здесь, чтобы открыть настройки XPhone.",
-                    12, Ui.MUTED, 500);
+        // Таймер «Не беспокоить» (показывается по нажатию на плитку)
+        dndRow = buildDndRow();
+        dndRow.setVisibility(View.GONE);
+        panel.addView(dndRow, Ui.lpMargins(ctx, -1, -2, 0, 10, 0, 0));
+
+        // Ещё функции — с Shizuku
+        if (locked[0] > 0) {
+            TextView hint = Ui.text(ctx, "Ещё " + locked[0] + " " + plural(locked[0]) + " — с Shizuku. Нажмите, чтобы узнать как.", 12, Ui.MUTED, 500);
             hint.setPadding(0, dp(12), 0, 0);
             hint.setOnClickListener(v -> openApp());
             panel.addView(hint);
         }
 
+        // Низ: сторона язычка и «Скрыть до перезахода»
+        LinearLayout foot = new LinearLayout(ctx);
+        TextView side = footButton(left ? "Вправо" : "Влево", R.drawable.ic_side);
+        side.setContentDescription(left ? "Перенести язычок вправо" : "Перенести язычок влево");
+        side.setOnClickListener(v -> setSide(!left));
+        TextView hide = footButton("Скрыть до перезахода", R.drawable.ic_eye_off);
+        hide.setOnClickListener(v -> { if (listener != null) listener.hideUntilExit(); });
+        foot.addView(side, new LinearLayout.LayoutParams(0, dp(36), 1));
+        LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(0, dp(36), 2f);
+        hl.leftMargin = dp(8);
+        foot.addView(hide, hl);
+        panel.addView(foot, Ui.lpMargins(ctx, -1, -2, 0, 12, 0, 0));
+
         ScrollView scroll = new ScrollView(ctx);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.addView(panel);
-        int width = Math.min(s.x - dp(24), dp(landscape ? 430 : 340));
-        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(width, -2, Gravity.END | Gravity.CENTER_VERTICAL);
-        sl.rightMargin = dp(12);
-        sl.topMargin = dp(12);
-        sl.bottomMargin = dp(12);
+        int width = Math.min(s.x - dp(24), dp(landscape ? (Ui.GLASS ? 440 : 430) : 340));
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(width, -2,
+                (left ? Gravity.START : Gravity.END) | Gravity.CENTER_VERTICAL);
+        sl.leftMargin = sl.rightMargin = dp(12);
+        sl.topMargin = sl.bottomMargin = dp(12);
         root.addView(scroll, sl);
 
         WindowManager.LayoutParams lp = baseLp(-1, -1,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
         lp.gravity = Gravity.TOP | Gravity.START;
+        if (blur) {
+            // «Стекло»: игра за панелью размывается, пока панель открыта.
+            lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+            lp.setBlurBehindRadius(dp(18));
+        }
         panelRoot = root;
         try { wm.addView(root, lp); } catch (Exception e) { panelRoot = null; return; }
 
         PcLink.addListener(pcListener);
-        scroll.setTranslationX(width + dp(24));
-        scroll.animate().translationX(0).setDuration(200).setInterpolator(new DecelerateInterpolator()).start();
+        float from = (left ? -1 : 1) * (width + dp(24));
+        scroll.setTranslationX(from);
+        scroll.animate().translationX(0).setDuration(220).setInterpolator(new DecelerateInterpolator()).start();
         refreshTiles();
+    }
+
+    private static String plural(int n) {
+        int m10 = n % 10, m100 = n % 100;
+        if (m10 == 1 && m100 != 11) return "функция";
+        if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return "функции";
+        return "функций";
+    }
+
+    private TextView footButton(String label, int icon) {
+        TextView b = Ui.text(ctx, label, 12, Ui.MUTED, 600);
+        b.setGravity(Gravity.CENTER);
+        b.setSingleLine(true);
+        b.setBackground(Ui.box(ctx, 0, Ui.LINE3, Ui.GLASS ? 999 : 10));
+        android.graphics.drawable.Drawable d = ctx.getDrawable(icon).mutate();
+        d.setTint(Ui.MUTED);
+        d.setBounds(0, 0, dp(14), dp(14));
+        b.setCompoundDrawables(d, null, null, null);
+        b.setCompoundDrawablePadding(dp(6));
+        b.setPadding(dp(10), 0, dp(10), 0);
+        return b;
+    }
+
+    /** Ряд выбора времени для «Не беспокоить». */
+    private LinearLayout buildDndRow() {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackground(Ui.box(ctx, Ui.CARD, Ui.LINE, Ui.GLASS ? 20 : 12));
+        box.setPadding(dp(12), dp(10), dp(12), dp(12));
+        box.addView(Ui.text(ctx, "Не беспокоить на…", 12, Ui.TEXT, 700));
+        String[] labels = {"15 мин", "30 мин", "1 час", "2 часа", "До конца игры", "Выключить"};
+        int[] minutes = {15, 30, 60, 120, Dnd.UNTIL_GAME_END, 0};
+        LinearLayout r1 = new LinearLayout(ctx), r2 = new LinearLayout(ctx);
+        for (int i = 0; i < labels.length; i++) {
+            TextView chip = Ui.text(ctx, labels[i], 12, Ui.TEXT, 600);
+            chip.setGravity(Gravity.CENTER);
+            chip.setBackground(Ui.box(ctx, Ui.GLASS ? 0x14FFFFFF : Ui.FIELD, Ui.LINE2, Ui.GLASS ? 999 : 8));
+            final int min = minutes[i];
+            chip.setOnClickListener(v -> {
+                dndRow.setVisibility(View.GONE);
+                Runnable done = () -> refreshTiles();
+                if (min == 0) Dnd.stop(ctx, done); else Dnd.start(ctx, min, done);
+            });
+            LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(0, dp(34), 1);
+            LinearLayout target = i < 3 ? r1 : r2;
+            if (target.getChildCount() > 0) cl.leftMargin = dp(6);
+            target.addView(chip, cl);
+        }
+        box.addView(r1, Ui.lpMargins(ctx, -1, -2, 0, 8, 0, 0));
+        box.addView(r2, Ui.lpMargins(ctx, -1, -2, 0, 6, 0, 0));
+        return box;
     }
 
     public void closePanel() {
         if (panelRoot == null) return;
         PcLink.removeListener(pcListener);
-        try { wm.removeView(panelRoot); } catch (Exception ignored) { }
+        remove(panelRoot);
         panelRoot = null;
+        dndRow = null;
         tiles.clear();
     }
 
@@ -264,12 +548,11 @@ public final class Overlay {
         infoText.setTextColor(i.thermal >= 2 ? Ui.ACCENT : Ui.SILVER);
     }
 
-    /** Обновить плитки, если панель открыта (например, после автоматического включения функций). */
+    /** Обновить плитки, если панель открыта. */
     public void refreshIfOpen() {
         if (panelRoot != null) refreshTiles();
     }
 
-    /** Узнать текущие состояния в фоне и обновить плитки. */
     private void refreshTiles() {
         final String pkg = gamePkg;
         Shell.background(() -> {
@@ -298,103 +581,121 @@ public final class Overlay {
 
     private void openApp() {
         closePanel();
-        Intent i = new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (listener != null) listener.openedExternal();
-        ctx.startActivity(i);
+        ctx.startActivity(new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
-
-    // ── Плитка ────────────────────────────────────────────────────────
-
-    /** Плитка «Стрим на ПК». */
-    private static final String STREAM = "stream";
 
     private final PcLink.Listener pcListener = () -> {
         Tile t = tiles.get(STREAM);
         if (t != null) t.paint();
     };
 
+    // ── Плитка ────────────────────────────────────────────────────────
+
     private final class Tile {
         final String id;
         final LinearLayout view;
+        final FrameLayout iconBox;   // «Стекло»: круг с иконкой
         final ImageView icon;
         final TextView label, state;
         boolean on;
-        final boolean available, action;
+        final boolean action;
 
         Tile(String id) {
             this.id = id;
-            this.available = Booster.available(ctx, id);
             this.action = Booster.CLEAN.equals(id) || Booster.RES.equals(id);
             view = new LinearLayout(ctx);
             view.setOrientation(LinearLayout.VERTICAL);
-            view.setPadding(dp(10), dp(10), dp(10), dp(9));
-            LinearLayout top = new LinearLayout(ctx);
-            top.setOrientation(LinearLayout.HORIZONTAL);
-            icon = Ui.icon(ctx, Booster.icon(id), 20, Ui.SILVER);
-            top.addView(icon);
-            if (!available) {
-                View spacer = new View(ctx);
-                top.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
-                top.addView(Ui.icon(ctx, R.drawable.ic_lock, 13, Ui.DIM));
-            }
-            view.addView(top, new LinearLayout.LayoutParams(-1, -2));
-            View fill = new View(ctx);
-            view.addView(fill, new LinearLayout.LayoutParams(1, 0, 1));
-            label = Ui.text(ctx, Booster.shortTitle(id), 12, Ui.TEXT, 700);
-            label.setMaxLines(2);
-            view.addView(label);
-            state = Ui.text(ctx, available ? (action ? "Нажмите" : "Выкл") : "Shizuku", 10, Ui.MUTED, 500);
+            icon = Ui.icon(ctx, iconRes(), Ui.GLASS ? 21 : 20, Ui.SILVER);
+            label = Ui.text(ctx, title(), Ui.GLASS ? 11 : 12, Ui.TEXT, 700);
+            state = Ui.text(ctx, action ? "Нажмите" : "Выкл", 10, Ui.MUTED, 500);
             state.setSingleLine(true);
-            view.addView(state, Ui.lpMargins(ctx, -2, -2, 0, 3, 0, 0));
+            if (Ui.GLASS) {
+                view.setGravity(Gravity.CENTER_HORIZONTAL);
+                iconBox = new FrameLayout(ctx);
+                iconBox.addView(icon, new FrameLayout.LayoutParams(dp(21), dp(21), Gravity.CENTER));
+                view.addView(iconBox, new LinearLayout.LayoutParams(dp(52), dp(52)));
+                label.setGravity(Gravity.CENTER);
+                label.setSingleLine(true);
+                view.addView(label, Ui.lpMargins(ctx, -2, -2, 0, 7, 0, 0));
+                state.setGravity(Gravity.CENTER);
+                view.addView(state, Ui.lpMargins(ctx, -2, -2, 0, 2, 0, 0));
+            } else {
+                iconBox = null;
+                view.setPadding(dp(10), dp(10), dp(10), dp(9));
+                view.addView(icon);
+                view.addView(new View(ctx), new LinearLayout.LayoutParams(1, 0, 1));
+                label.setMaxLines(2);
+                view.addView(label);
+                view.addView(state, Ui.lpMargins(ctx, -2, -2, 0, 3, 0, 0));
+            }
+            view.setContentDescription(Booster.title(id));
             view.setOnClickListener(v -> click());
             view.setOnLongClickListener(v -> {
-                Toast.makeText(ctx, Booster.hint(id), Toast.LENGTH_SHORT).show();
+                Toast.makeText(ctx, hint(), Toast.LENGTH_SHORT).show();
                 return true;
             });
             paint();
         }
 
-        void setOn(boolean v) {
-            on = v;
-            paint();
-        }
+        int iconRes() { return MIC.equals(id) ? R.drawable.ic_mic_off : Booster.icon(id); }
+        String title() { return MIC.equals(id) ? "Микрофон" : Ui.GLASS ? Booster.tinyTitle(id) : Booster.shortTitle(id); }
+        String hint() { return MIC.equals(id) ? "Плавающая кнопка, которая мгновенно выключает микрофон телефона" : Booster.hint(id); }
+
+        void setOn(boolean v) { on = v; paint(); }
 
         void paint() {
+            String st;
             if (STREAM.equals(id)) {
                 PcLink.State s = PcLink.state();
                 on = s == PcLink.State.STREAMING;
-                state.setText(s == PcLink.State.STREAMING ? "Идёт"
-                        : s == PcLink.State.CONNECTING ? "Запуск…"
-                        : s == PcLink.State.IDLE ? "Выкл"
-                        : PcLink.waiting() ? "Ищем ПК…" : "Нет ПК");
+                st = s == PcLink.State.STREAMING ? "Идёт" : s == PcLink.State.CONNECTING ? "Запуск…"
+                        : s == PcLink.State.IDLE ? "Выкл" : PcLink.waiting() ? "Ищем ПК…" : "Нет ПК";
+            } else if (MIC.equals(id)) {
+                on = micBubble != null;
+                st = !on ? "Скрыта" : Mic.muted() ? "Выключен" : "На экране";
+            } else if (Booster.DND.equals(id)) {
+                st = on ? (Dnd.timed() ? Dnd.untilText() : "Вкл") : "Выкл";
+            } else if (action) {
+                st = state.getText().toString().isEmpty() ? "Нажмите" : state.getText().toString();
+            } else {
+                st = Booster.stateText(id, on);
             }
-            boolean lit = on && available && !action;
-            view.setBackground(Ui.box(ctx, lit ? Ui.ACCENT : Ui.TILE_OFF, lit ? Ui.ACCENT : Ui.LINE, 16));
-            Ui.tint(icon, lit ? Ui.ON_ACCENT : Ui.SILVER);
-            label.setTextColor(lit ? Ui.ON_ACCENT : Ui.TEXT);
-            state.setTextColor(lit ? 0xFF3A3A44 : Ui.MUTED);
-            if (available && !action && !STREAM.equals(id)) state.setText(Booster.stateText(id, on));
-            view.setAlpha(available ? 1f : 0.5f);
+            state.setText(st);
+            boolean lit = on && !action;
+            if (Ui.GLASS) {
+                iconBox.setBackground(Ui.circle(lit ? Ui.ACCENT : Ui.TILE_OFF));
+                Ui.tint(icon, lit ? Ui.ON_ACCENT : 0xFFFFFFFF);
+                label.setTextColor(Ui.TEXT);
+                state.setTextColor(lit ? Ui.ACCENT : Ui.MUTED);
+            } else {
+                view.setBackground(Ui.box(ctx, lit ? Ui.ACCENT : Ui.TILE_OFF, lit ? Ui.ACCENT : Ui.LINE, Ui.R_TILE));
+                Ui.tint(icon, lit ? Ui.ON_ACCENT : Ui.SILVER);
+                label.setTextColor(lit ? Ui.ON_ACCENT : Ui.TEXT);
+                state.setTextColor(lit ? 0xFF3A3A44 : Ui.MUTED);
+            }
         }
 
         void click() {
-            if (!available) {
-                Toast.makeText(ctx, Booster.supported(id)
-                        ? "Нужен Shizuku: откройте XPhone на телефоне — там подсказка, как его запустить."
-                        : "На этом телефоне такой функции нет.", Toast.LENGTH_LONG).show();
-                return;
-            }
             if (STREAM.equals(id)) {
-                if (PcLink.state() == PcLink.State.STREAMING) {
-                    PcLink.requestStop();
-                } else {
+                if (PcLink.state() == PcLink.State.STREAMING) PcLink.requestStop();
+                else {
                     PcLink.requestStart(ctx);
                     if (PcLink.state() == PcLink.State.NO_PC)
-                        Toast.makeText(ctx, PcLink.canEnableWifiDebugging(ctx)
-                                ? "Ищем компьютер… Проверьте, что XPhone на ПК открыт."
-                                : "Включите «Беспроводную отладку» плиткой в шторке и откройте XPhone на ПК.", Toast.LENGTH_LONG).show();
+                        toast(PcLink.canEnableWifiDebugging(ctx) ? "Ищем компьютер…" : "Включите «Беспроводную отладку» в шторке", R.drawable.ic_cast);
                 }
                 paint();
+                return;
+            }
+            if (MIC.equals(id)) {
+                boolean show = micBubble == null;
+                Prefs.put(ctx, Prefs.MIC_BUBBLE, show);
+                if (show) showMicBubble(); else hideMicBubble();
+                paint();
+                return;
+            }
+            if (Booster.DND.equals(id)) {
+                if (dndRow != null) dndRow.setVisibility(dndRow.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
                 return;
             }
             if (Booster.RES.equals(id)) {
@@ -402,27 +703,26 @@ public final class Overlay {
                 if (listener != null) listener.openedExternal();
                 Intent i = new Intent(Settings.ACTION_DISPLAY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try { ctx.startActivity(i); } catch (Exception ignored) { }
-                Toast.makeText(ctx, "Выберите «Разрешение экрана» → FHD+ или WQHD+", Toast.LENGTH_LONG).show();
+                toast("Выберите «Разрешение экрана»", R.drawable.ic_monitor);
                 return;
             }
             if (Booster.CLEAN.equals(id)) {
                 state.setText("Закрываем…");
                 Shell.background(() -> {
                     Booster.clean(ctx);
-                    Shell.onMain(() -> state.setText("Готово"));
+                    Shell.onMain(() -> { state.setText("Готово"); toast("Фоновые приложения закрыты", R.drawable.ic_trash); });
                 });
                 return;
             }
             final boolean target = !on;
-            setOn(target); // сразу, чтобы отклик был мгновенным
+            setOn(target);
             final String pkg = gamePkg;
             Shell.background(() -> {
                 Booster.set(ctx, id, target, pkg);
                 boolean real = Booster.read(ctx, id, pkg);
                 Shell.onMain(() -> {
                     setOn(real);
-                    if (real != target)
-                        Toast.makeText(ctx, "Телефон не дал переключить «" + Booster.title(id) + "»", Toast.LENGTH_SHORT).show();
+                    if (real != target) toast("Телефон не дал переключить «" + Booster.title(id) + "»", R.drawable.ic_alert);
                 });
             });
         }

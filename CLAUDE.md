@@ -25,6 +25,12 @@
 - Ключ подписи: `Документы\XPhone-signing-key\xphone-release.jks` (не в git!). Пароли — `%USERPROFILE%\.gradle\gradle.properties`. Не печатать их в вывод.
 - Проверено на S25 Ultra: `cmd display set-user-preferred-display-mode` не работает (SecurityException) — разрешение только через настройки. `cmd notification set_dnd none` глушит и игру — используем `priority`.
 - После переустановки с другой подписью Shizuku-разрешение выдаётся заново (только руками пользователя).
+- Две темы (`Ui.java`: «Графит» и «Стекло»), цвета — поля `Ui`, `Ui.load()` перед построением экрана/панели.
+- В панели показывать только доступное: нет функции на телефоне или нет прав — плитки нет (+ строка «Ещё N — с Shizuku»).
+- Микрофон: `cmd sensor_privacy enable|disable <user> microphone` (Android 12+, через Shizuku) — проверено.
+- «Не беспокоить» на S25 Ultra с Galaxy Watch сразу выключает служба часов (watchuniteplugin) — показываем подсказку.
+- В игре включено «Без анимаций» (animator scale 0): таймеры показа окон — только `Handler.postDelayed`, не `animate().withEndAction`.
+- Оверлей-окна не видны в `uiautomator dump` — при проверке нажимать по координатам со скриншота.
 
 ## Сборка и запуск
 

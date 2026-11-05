@@ -22,6 +22,14 @@ public final class Prefs {
     public static final String AUTO_STREAM = "auto_stream";
     /** Останавливать трансляцию, когда игра закрыта (если её начала игра). */
     public static final String AUTO_STREAM_STOP = "auto_stream_stop";
+    /** Приветствие при запуске игры (вместо сразу открытой панели). */
+    public static final String WELCOME = "welcome";
+    /** Язычок у левого края (иначе — у правого). */
+    public static final String HANDLE_LEFT = "handle_left";
+    /** Плавающая кнопка микрофона в игре. */
+    public static final String MIC_BUBBLE = "mic_bubble";
+    /** Включать «Питание USB», когда заряд не меньше этого (0 — не включать само). */
+    public static final String PASS_LEVEL = "pass_level";
     private static final String ADDED = "games_added";
     private static final String EXCLUDED = "games_excluded";
 
@@ -35,7 +43,13 @@ public final class Prefs {
     public static void put(Context c, String key, boolean v) { sp(c).edit().putBoolean(key, v).apply(); }
 
     public static boolean enabled(Context c) { return get(c, ENABLED, true); }
-    public static boolean autoPanel(Context c) { return get(c, AUTO_PANEL, true); }
+    public static boolean autoPanel(Context c) { return get(c, AUTO_PANEL, false); }
+    public static boolean welcome(Context c) { return get(c, WELCOME, true); }
+    public static boolean handleLeft(Context c) { return get(c, HANDLE_LEFT, false); }
+    public static int getInt(Context c, String key, int def) { return sp(c).getInt(key, def); }
+    public static void putInt(Context c, String key, int v) { sp(c).edit().putInt(key, v).apply(); }
+    public static float getFloat(Context c, String key, float def) { return sp(c).getFloat(key, def); }
+    public static void putFloat(Context c, String key, float v) { sp(c).edit().putFloat(key, v).apply(); }
     public static boolean restore(Context c) { return get(c, RESTORE, true); }
 
     /** Включать функцию сама при запуске игры. По умолчанию — «Не беспокоить» и «Производительность». */

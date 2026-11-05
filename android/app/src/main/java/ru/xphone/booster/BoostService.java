@@ -7,10 +7,13 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,22 +21,27 @@ import android.os.Looper;
 import android.os.PowerManager;
 
 /**
- * Следит, какая программа на экране. Открылась игра — показывает язычок (и по желанию панель)
- * и включает выбранные функции. Вышли из игры — убирает язычок и возвращает настройки.
+ * Следит, какая программа на экране. Открылась игра — показывает язычок, приветствие (или панель)
+ * и включает выбранные функции. Вышли из игры — убирает всё и возвращает настройки.
  */
 public class BoostService extends Service {
     public static final String ACTION_SHOW_PANEL = "ru.xphone.booster.SHOW_PANEL";
     private static final String CHANNEL = "boost";
     private static final long TICK_MS = 1000, EXIT_DELAY_MS = 2500, EXTERNAL_GRACE_MS = 120_000;
 
+    private static BoostService instance;
+
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Overlay overlay;
     private String currentGame;
+    private String hiddenGame;      // «Скрыть до перезахода»
     private String lastForeground;
     private long exitSince;
     private long externalUntil;
     private String launcher;
     private boolean streamByGame;
+    private boolean passByLevel;    // «Питание USB» включили мы по проценту заряда
+    private BroadcastReceiver batteryReceiver;
 
     public static void start(Context c) {
         Intent i = new Intent(c, BoostService.class);
@@ -44,11 +52,25 @@ public class BoostService extends Service {
         c.stopService(new Intent(c, BoostService.class));
     }
 
+    /** Короткое сообщение поверх игры (если служба работает). */
+    public static void toast(String text, int icon) {
+        BoostService s = instance;
+        if (s != null && s.overlay != null) s.overlay.toast(text, icon);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         startForegroundNotice();
-        overlay = new Overlay(this, () -> externalUntil = System.currentTimeMillis() + EXTERNAL_GRACE_MS);
+        overlay = new Overlay(this, new Overlay.Listener() {
+            @Override public void openedExternal() { externalUntil = System.currentTimeMillis() + EXTERNAL_GRACE_MS; }
+            @Override public void hideUntilExit() {
+                hiddenGame = currentGame;
+                overlay.hideAll();
+                overlay.toast("Оверлей скрыт до перезахода в игру", R.drawable.ic_eye_off);
+            }
+        });
         launcher = homePackage();
         // Если прошлый раз что-то поменяли и не вернули (например, телефон перезагрузился) — вернуть.
         if (Prefs.restore(this) && Booster.hasChanges(this)) Shell.background(() -> Booster.restoreAll(this));
@@ -69,9 +91,11 @@ public class BoostService extends Service {
     @Override
     public void onDestroy() {
         handler.removeCallbacks(tick);
+        stopBatteryWatch();
         PcLink.stop();
         if (overlay != null) overlay.hideAll();
-        if (currentGame != null && Prefs.restore(this)) Shell.background(() -> Booster.restoreAll(this));
+        if (currentGame != null) afterGame();
+        instance = null;
         super.onDestroy();
     }
 
@@ -82,7 +106,6 @@ public class BoostService extends Service {
         @Override
         public void run() {
             try { check(); } catch (Exception ignored) { }
-            // Экран выключен — проверяем реже, чтобы не тратить батарею.
             boolean interactive = getSystemService(PowerManager.class).isInteractive();
             handler.postDelayed(this, interactive ? TICK_MS : TICK_MS * 5);
         }
@@ -100,8 +123,7 @@ public class BoostService extends Service {
             return;
         }
         if (currentGame == null) return;
-        // Открыли настройки из панели — подождём, пока человек вернётся в игру.
-        if (now < externalUntil && !fg.equals(launcher)) return;
+        if (now < externalUntil && !fg.equals(launcher)) return; // открыли настройки из панели
         if (fg.equals("com.android.systemui")) return;
         if (exitSince == 0) exitSince = now;
         else if (now - exitSince > EXIT_DELAY_MS) onGameExit();
@@ -109,32 +131,101 @@ public class BoostService extends Service {
 
     private void onGameStart(String pkg) {
         boolean switched = currentGame != null;
+        android.util.Log.i("XPhone", "game start: " + pkg + " switched=" + switched + " welcome=" + Prefs.welcome(this) + " autoPanel=" + Prefs.autoPanel(this));
         currentGame = pkg;
-        overlay.closePanel();
         overlay.hideAll();
-        overlay.showHandle(pkg);
+        if (!pkg.equals(hiddenGame)) {
+            overlay.showHandle(pkg);
+            if (!switched) {
+                if (Prefs.autoPanel(this))
+                    handler.postDelayed(() -> { if (pkg.equals(currentGame)) overlay.openPanel(); }, 1500);
+                else if (Prefs.welcome(this))
+                    handler.postDelayed(() -> { if (pkg.equals(currentGame)) overlay.welcome(); }, 1200);
+            }
+        }
         Shell.background(() -> {
+            boolean dnd = false;
             for (String id : Booster.TOGGLES)
-                if (Prefs.auto(this, id) && Booster.available(this, id)) Booster.set(this, id, true, pkg);
+                if (Prefs.auto(this, id) && Booster.available(this, id)) {
+                    Booster.set(this, id, true, pkg);
+                    if (Booster.DND.equals(id)) dnd = true;
+                }
             Shell.onMain(overlay::refreshIfOpen);
+            if (dnd) {
+                // Galaxy Watch может сразу выключить «Не беспокоить» — проверим и подскажем.
+                try { Thread.sleep(2500); } catch (InterruptedException ignored) { }
+                if (pkg.equals(currentGame) && !Booster.read(this, Booster.DND, pkg)) {
+                    Prefs.put(this, "dnd_reverted", true);
+                    Shell.onMain(() -> {
+                        overlay.toast("«Не беспокоить» выключил телефон — см. подсказку в XPhone", R.drawable.ic_alert);
+                        overlay.refreshIfOpen();
+                    });
+                }
+            }
         });
-        // Трансляция на ПК вместе с игрой.
         if (!switched && Prefs.get(this, Prefs.AUTO_STREAM, false) && PcLink.state() != PcLink.State.STREAMING) {
             streamByGame = true;
             PcLink.requestStart(this);
         }
-        if (Prefs.autoPanel(this) && !switched)
-            handler.postDelayed(() -> { if (pkg.equals(currentGame)) overlay.openPanel(); }, 1500);
+        startBatteryWatch();
     }
 
     private void onGameExit() {
+        android.util.Log.i("XPhone", "game exit: " + currentGame);
         currentGame = null;
+        hiddenGame = null;
         exitSince = 0;
         overlay.hideAll();
-        if (Prefs.restore(this)) Shell.background(() -> Booster.restoreAll(this));
+        afterGame();
         if (streamByGame && Prefs.get(this, Prefs.AUTO_STREAM_STOP, true)) PcLink.requestStop();
         streamByGame = false;
     }
+
+    /** Вернуть всё как было до игры. */
+    private void afterGame() {
+        stopBatteryWatch();
+        Dnd.reset();
+        passByLevel = false;
+        Shell.background(() -> {
+            Mic.restore(this);
+            if (Prefs.restore(this)) Booster.restoreAll(this);
+        });
+    }
+
+    // ── «Питание USB» по проценту заряда ──────────────────────────────
+
+    private void startBatteryWatch() {
+        int level = Prefs.getInt(this, Prefs.PASS_LEVEL, 0);
+        if (level <= 0 || batteryReceiver != null || !Booster.available(this, Booster.PASS)) return;
+        batteryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                int l = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), s = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                if (l < 0 || s <= 0) return;
+                int pct = Math.round(l * 100f / s);
+                int target = Prefs.getInt(c, Prefs.PASS_LEVEL, 0);
+                if (target <= 0) return;
+                if (pct >= target && !passByLevel) {
+                    passByLevel = true;
+                    Shell.background(() -> Booster.set(c, Booster.PASS, true, null));
+                    overlay.toast("Заряд " + pct + "% — питание напрямую от зарядки", R.drawable.ic_plug);
+                } else if (pct <= target - 5 && passByLevel) {
+                    passByLevel = false;
+                    Shell.background(() -> Booster.set(c, Booster.PASS, false, null));
+                    overlay.toast("Заряд " + pct + "% — снова заряжаем батарею", R.drawable.ic_plug);
+                }
+            }
+        };
+        registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+    }
+
+    private void stopBatteryWatch() {
+        if (batteryReceiver == null) return;
+        try { unregisterReceiver(batteryReceiver); } catch (Exception ignored) { }
+        batteryReceiver = null;
+    }
+
+    // ── Служебное ─────────────────────────────────────────────────────
 
     /** Какая программа сейчас на экране (по событиям «приложение открыто»). */
     private String foregroundPackage() {
@@ -167,7 +258,7 @@ public class BoostService extends Service {
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_gamepad)
                 .setContentTitle("XPhone следит за играми")
-                .setContentText("Свайп от правого края в игре — игровая панель")
+                .setContentText("В игре — свайп от края экрана открывает панель")
                 .setContentIntent(open)
                 .setOngoing(true)
                 .build();
