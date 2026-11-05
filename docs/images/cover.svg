@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+<title id="title">XPhone — игра на телефоне, трансляция на компьютере</title>
+<desc id="desc">Экран и звук Android на Windows. Игровая панель. USB, Wi-Fi и LAN. На базе scrcpy.</desc>
+<rect width="1280" height="420" rx="28" fill="#101114"/>
+<rect x="1" y="1" width="1278" height="418" rx="27" fill="none" stroke="#34363c"/>
+<g font-family="Segoe UI,Arial,sans-serif"><text x="64" y="109" fill="#a7a9b0" font-size="16" letter-spacing="4">ANDROID + WINDOWS</text>
+<text x="60" y="198" fill="#f5f5f7" font-size="78" font-weight="800">XPHONE</text>
+<text x="64" y="253" fill="#f5f5f7" font-size="28">Игра — на телефоне. Трансляция — на ПК.</text>
+<text x="64" y="298" fill="#aaadb6" font-size="20">Экран и звук · Игровая панель · Своя настройка</text>
+<text x="64" y="365" fill="#d2d3d8" font-size="17">USB / WI-FI / LAN</text>
+<text x="305" y="365" fill="#858892" font-size="17">На базе scrcpy</text></g>
+<g fill="none" stroke="#9699a3" stroke-width="3"><rect x="865" y="112" width="305" height="192" rx="16"/><path d="M980 304v32m-54 0h132"/><rect x="798" y="172" width="98" height="164" rx="16" fill="#17181d"/><path d="M834 186h27m-23 135h17"/></g>
+<path d="m961 185 58 31-58 31z" fill="#e9e9ed"/><circle cx="848" cy="250" r="12" fill="#e9e9ed"/>
+</svg>
