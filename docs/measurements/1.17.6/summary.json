@@ -1,0 +1,1900 @@
+[
+  {
+    "scenario": "game-handle-stream",
+    "samples": 6,
+    "duration_s": 67.92,
+    "foreground_states": [
+      "other"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 28.211,
+      "min": 26.063,
+      "max": 31.166
+    },
+    "composition_fps": {
+      "mean": 89.62,
+      "min": 89.027,
+      "max": 89.903
+    },
+    "battery_celsius": {
+      "mean": 35.933,
+      "min": 35.9,
+      "max": 36.0
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 22.666,
+      "min": 22.332,
+      "max": 22.92
+    },
+    "mem_available_mib": {
+      "mean": 2567.395,
+      "min": 2485.496,
+      "max": 2625.984
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 109.281,
+          "min": 107.259,
+          "max": 115.479
+        },
+        "swap_pss_mib": {
+          "mean": 30.011,
+          "min": 29.882,
+          "max": 30.604
+        },
+        "graphics_mib": {
+          "mean": 14.238,
+          "min": 14.238,
+          "max": 14.238
+        },
+        "cpu_one_core_pct": 6.272
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 107.896,
+          "min": 106.647,
+          "max": 109.14
+        },
+        "swap_pss_mib": {
+          "mean": 57.85,
+          "min": 57.84,
+          "max": 57.902
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 9.349
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1053.213,
+          "min": 1053.018,
+          "max": 1053.599
+        },
+        "swap_pss_mib": {
+          "mean": 286.476,
+          "min": 286.41,
+          "max": 286.586
+        },
+        "graphics_mib": {
+          "mean": 176.325,
+          "min": 176.012,
+          "max": 176.492
+        },
+        "cpu_one_core_pct": 32.627
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.295,
+          "min": 44.294,
+          "max": 44.298
+        },
+        "swap_pss_mib": {
+          "mean": 40.904,
+          "min": 40.902,
+          "max": 40.914
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 263.834,
+          "min": 257.248,
+          "max": 267.127
+        },
+        "swap_pss_mib": {
+          "mean": 13.776,
+          "min": 13.773,
+          "max": 13.789
+        },
+        "graphics_mib": {
+          "mean": 226.438,
+          "min": 219.852,
+          "max": 229.73
+        },
+        "cpu_one_core_pct": 24.367
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 29.702,
+          "min": 27.419,
+          "max": 41.114
+        },
+        "swap_pss_mib": {
+          "mean": 7.686,
+          "min": 7.684,
+          "max": 7.695
+        },
+        "graphics_mib": {
+          "mean": 3.88,
+          "min": 1.598,
+          "max": 15.293
+        },
+        "cpu_one_core_pct": 19.494
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 13.692,
+          "min": 13.692,
+          "max": 13.692
+        },
+        "swap_pss_mib": {
+          "mean": 8.571,
+          "min": 8.57,
+          "max": 8.574
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.195
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 172.377,
+          "min": 169.883,
+          "max": 174.824
+        },
+        "private_mib": {
+          "mean": 129.702,
+          "min": 127.445,
+          "max": 131.977
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.046,
+          "min": 0.0,
+          "max": 0.139
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 84.206,
+          "min": 81.738,
+          "max": 85.461
+        },
+        "private_mib": {
+          "mean": 106.16,
+          "min": 103.215,
+          "max": 107.676
+        },
+        "cpu_one_core_pct": {
+          "mean": 12.214,
+          "min": 10.512,
+          "max": 14.992
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.119,
+          "min": 26.93,
+          "max": 27.309
+        },
+        "private_mib": {
+          "mean": 11.125,
+          "min": 10.891,
+          "max": 11.359
+        },
+        "cpu_one_core_pct": {
+          "mean": 3.25,
+          "min": 2.355,
+          "max": 4.841
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-huds-no-stream",
+    "samples": 6,
+    "duration_s": 67.42,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 34.031,
+      "min": 32.677,
+      "max": 35.751
+    },
+    "composition_fps": {
+      "mean": 89.587,
+      "min": 89.244,
+      "max": 90.285
+    },
+    "battery_celsius": {
+      "mean": 36.15,
+      "min": 36.1,
+      "max": 36.2
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 13.511,
+      "min": 13.395,
+      "max": 13.624
+    },
+    "mem_available_mib": {
+      "mean": 2806.264,
+      "min": 2728.266,
+      "max": 2894.609
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 112.95,
+          "min": 110.945,
+          "max": 118.054
+        },
+        "swap_pss_mib": {
+          "mean": 30.831,
+          "min": 30.831,
+          "max": 30.831
+        },
+        "graphics_mib": {
+          "mean": 15.605,
+          "min": 15.605,
+          "max": 15.605
+        },
+        "cpu_one_core_pct": 8.054
+      },
+      "stream": {
+        "pss_mib": null,
+        "swap_pss_mib": null,
+        "graphics_mib": null,
+        "cpu_one_core_pct": null
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1062.549,
+          "min": 1062.037,
+          "max": 1063.655
+        },
+        "swap_pss_mib": {
+          "mean": 273.537,
+          "min": 272.934,
+          "max": 273.992
+        },
+        "graphics_mib": {
+          "mean": 177.033,
+          "min": 177.008,
+          "max": 177.105
+        },
+        "cpu_one_core_pct": 40.018
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.323,
+          "min": 44.323,
+          "max": 44.323
+        },
+        "swap_pss_mib": {
+          "mean": 40.918,
+          "min": 40.918,
+          "max": 40.918
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.03
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 237.312,
+          "min": 237.307,
+          "max": 237.318
+        },
+        "swap_pss_mib": {
+          "mean": 13.781,
+          "min": 13.781,
+          "max": 13.781
+        },
+        "graphics_mib": {
+          "mean": 200.094,
+          "min": 200.094,
+          "max": 200.094
+        },
+        "cpu_one_core_pct": 16.271
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 25.476,
+          "min": 25.476,
+          "max": 25.476
+        },
+        "swap_pss_mib": {
+          "mean": 8.098,
+          "min": 8.098,
+          "max": 8.098
+        },
+        "graphics_mib": {
+          "mean": 0.887,
+          "min": 0.887,
+          "max": 0.887
+        },
+        "cpu_one_core_pct": 0.0
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 12.865,
+          "min": 12.865,
+          "max": 12.865
+        },
+        "swap_pss_mib": {
+          "mean": 8.508,
+          "min": 8.508,
+          "max": 8.508
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.0
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 151.755,
+          "min": 150.75,
+          "max": 153.086
+        },
+        "private_mib": {
+          "mean": 109.008,
+          "min": 107.043,
+          "max": 111.066
+        },
+        "cpu_one_core_pct": {
+          "mean": 55.159,
+          "min": 52.377,
+          "max": 58.578
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": null,
+        "private_mib": null,
+        "cpu_one_core_pct": null
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 16.081,
+          "min": 16.055,
+          "max": 16.086
+        },
+        "private_mib": {
+          "mean": 8.156,
+          "min": 8.094,
+          "max": 8.168
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.232,
+          "min": 0.0,
+          "max": 0.418
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-huds-stream-repeat",
+    "samples": 6,
+    "duration_s": 67.75,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 30.009,
+      "min": 28.533,
+      "max": 32.613
+    },
+    "composition_fps": {
+      "mean": 89.92,
+      "min": 89.292,
+      "max": 90.294
+    },
+    "battery_celsius": {
+      "mean": 36.1,
+      "min": 36.1,
+      "max": 36.1
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 22.514,
+      "min": 21.694,
+      "max": 23.13
+    },
+    "mem_available_mib": {
+      "mean": 2717.751,
+      "min": 2708.23,
+      "max": 2728.996
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 113.695,
+          "min": 111.762,
+          "max": 119.293
+        },
+        "swap_pss_mib": {
+          "mean": 30.776,
+          "min": 30.776,
+          "max": 30.776
+        },
+        "graphics_mib": {
+          "mean": 15.605,
+          "min": 15.605,
+          "max": 15.605
+        },
+        "cpu_one_core_pct": 7.292
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 133.674,
+          "min": 132.026,
+          "max": 135.364
+        },
+        "swap_pss_mib": null,
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 10.317
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1064.267,
+          "min": 1064.083,
+          "max": 1064.489
+        },
+        "swap_pss_mib": {
+          "mean": 271.652,
+          "min": 271.25,
+          "max": 272.059
+        },
+        "graphics_mib": {
+          "mean": 177.157,
+          "min": 177.129,
+          "max": 177.184
+        },
+        "cpu_one_core_pct": 34.48
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.316,
+          "min": 44.315,
+          "max": 44.319
+        },
+        "swap_pss_mib": {
+          "mean": 40.918,
+          "min": 40.918,
+          "max": 40.918
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.03
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 267.223,
+          "min": 267.223,
+          "max": 267.223
+        },
+        "swap_pss_mib": {
+          "mean": 13.781,
+          "min": 13.781,
+          "max": 13.781
+        },
+        "graphics_mib": {
+          "mean": 229.73,
+          "min": 229.73,
+          "max": 229.73
+        },
+        "cpu_one_core_pct": 26.701
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 29.919,
+          "min": 27.28,
+          "max": 41.126
+        },
+        "swap_pss_mib": {
+          "mean": 7.618,
+          "min": 7.617,
+          "max": 7.625
+        },
+        "graphics_mib": {
+          "mean": 3.88,
+          "min": 1.598,
+          "max": 15.293
+        },
+        "cpu_one_core_pct": 18.509
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 13.699,
+          "min": 13.412,
+          "max": 13.955
+        },
+        "swap_pss_mib": {
+          "mean": 8.066,
+          "min": 8.066,
+          "max": 8.066
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.439
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 154.85,
+          "min": 153.281,
+          "max": 157.188
+        },
+        "private_mib": {
+          "mean": 109.964,
+          "min": 108.34,
+          "max": 112.539
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.07,
+          "min": 0.0,
+          "max": 0.279
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 87.614,
+          "min": 85.82,
+          "max": 90.227
+        },
+        "private_mib": {
+          "mean": 101.312,
+          "min": 99.57,
+          "max": 103.988
+        },
+        "cpu_one_core_pct": {
+          "mean": 12.52,
+          "min": 11.187,
+          "max": 14.945
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.398,
+          "min": 27.273,
+          "max": 27.645
+        },
+        "private_mib": {
+          "mean": 11.281,
+          "min": 11.281,
+          "max": 11.281
+        },
+        "cpu_one_core_pct": {
+          "mean": 2.198,
+          "min": 1.108,
+          "max": 3.203
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-huds-stream",
+    "samples": 6,
+    "duration_s": 68.16,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 29.374,
+      "min": 26.777,
+      "max": 34.528
+    },
+    "composition_fps": {
+      "mean": 90.17,
+      "min": 89.789,
+      "max": 90.619
+    },
+    "battery_celsius": {
+      "mean": 36.2,
+      "min": 36.2,
+      "max": 36.2
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 22.991,
+      "min": 22.431,
+      "max": 23.489
+    },
+    "mem_available_mib": {
+      "mean": 2566.832,
+      "min": 2478.895,
+      "max": 2631.277
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 107.37,
+          "min": 104.226,
+          "max": 115.003
+        },
+        "swap_pss_mib": {
+          "mean": 30.757,
+          "min": 30.757,
+          "max": 30.757
+        },
+        "graphics_mib": {
+          "mean": 16.772,
+          "min": 15.605,
+          "max": 19.105
+        },
+        "cpu_one_core_pct": 7.057
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 99.034,
+          "min": 97.752,
+          "max": 100.317
+        },
+        "swap_pss_mib": {
+          "mean": 57.902,
+          "min": 57.902,
+          "max": 57.902
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 9.683
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1060.472,
+          "min": 1059.487,
+          "max": 1060.963
+        },
+        "swap_pss_mib": {
+          "mean": 276.171,
+          "min": 275.469,
+          "max": 277.051
+        },
+        "graphics_mib": {
+          "mean": 176.974,
+          "min": 176.859,
+          "max": 177.023
+        },
+        "cpu_one_core_pct": 33.187
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.31,
+          "min": 44.31,
+          "max": 44.311
+        },
+        "swap_pss_mib": {
+          "mean": 40.914,
+          "min": 40.914,
+          "max": 40.914
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 265.577,
+          "min": 257.341,
+          "max": 267.228
+        },
+        "swap_pss_mib": {
+          "mean": 13.777,
+          "min": 13.777,
+          "max": 13.777
+        },
+        "graphics_mib": {
+          "mean": 228.084,
+          "min": 219.852,
+          "max": 229.73
+        },
+        "cpu_one_core_pct": 26.247
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 27.418,
+          "min": 27.415,
+          "max": 27.419
+        },
+        "swap_pss_mib": {
+          "mean": 7.684,
+          "min": 7.684,
+          "max": 7.684
+        },
+        "graphics_mib": {
+          "mean": 1.598,
+          "min": 1.598,
+          "max": 1.598
+        },
+        "cpu_one_core_pct": 20.114
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 13.691,
+          "min": 13.691,
+          "max": 13.691
+        },
+        "swap_pss_mib": {
+          "mean": 8.578,
+          "min": 8.578,
+          "max": 8.578
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.286
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 158.9,
+          "min": 156.559,
+          "max": 161.301
+        },
+        "private_mib": {
+          "mean": 122.617,
+          "min": 120.715,
+          "max": 124.73
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.046,
+          "min": 0.0,
+          "max": 0.276
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 79.072,
+          "min": 75.996,
+          "max": 83.371
+        },
+        "private_mib": {
+          "mean": 103.256,
+          "min": 99.582,
+          "max": 107.676
+        },
+        "cpu_one_core_pct": {
+          "mean": 12.276,
+          "min": 11.635,
+          "max": 13.205
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.048,
+          "min": 26.781,
+          "max": 27.184
+        },
+        "private_mib": {
+          "mean": 11.257,
+          "min": 10.891,
+          "max": 11.359
+        },
+        "cpu_one_core_pct": {
+          "mean": 3.327,
+          "min": 2.885,
+          "max": 3.825
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-panel-stream",
+    "samples": 6,
+    "duration_s": 68.13,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 28.331,
+      "min": 26.372,
+      "max": 30.338
+    },
+    "composition_fps": {
+      "mean": 89.946,
+      "min": 89.085,
+      "max": 92.165
+    },
+    "battery_celsius": {
+      "mean": 36.033,
+      "min": 36.0,
+      "max": 36.1
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 28.247,
+      "min": 27.489,
+      "max": 28.906
+    },
+    "mem_available_mib": {
+      "mean": 2685.441,
+      "min": 2603.793,
+      "max": 2739.02
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 186.859,
+          "min": 185.081,
+          "max": 193.425
+        },
+        "swap_pss_mib": {
+          "mean": 30.564,
+          "min": 30.562,
+          "max": 30.565
+        },
+        "graphics_mib": {
+          "mean": 85.048,
+          "min": 84.215,
+          "max": 85.215
+        },
+        "cpu_one_core_pct": 6.766
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 113.528,
+          "min": 112.251,
+          "max": 114.801
+        },
+        "swap_pss_mib": {
+          "mean": 57.902,
+          "min": 57.902,
+          "max": 57.902
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 9.585
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1055.772,
+          "min": 1055.116,
+          "max": 1056.71
+        },
+        "swap_pss_mib": {
+          "mean": 283.698,
+          "min": 282.293,
+          "max": 285.078
+        },
+        "graphics_mib": {
+          "mean": 176.34,
+          "min": 176.23,
+          "max": 176.496
+        },
+        "cpu_one_core_pct": 33.509
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.305,
+          "min": 44.305,
+          "max": 44.305
+        },
+        "swap_pss_mib": {
+          "mean": 40.914,
+          "min": 40.914,
+          "max": 40.914
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 265.52,
+          "min": 257.29,
+          "max": 267.169
+        },
+        "swap_pss_mib": {
+          "mean": 13.789,
+          "min": 13.789,
+          "max": 13.789
+        },
+        "graphics_mib": {
+          "mean": 228.084,
+          "min": 219.852,
+          "max": 229.73
+        },
+        "cpu_one_core_pct": 25.672
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 27.42,
+          "min": 27.419,
+          "max": 27.423
+        },
+        "swap_pss_mib": {
+          "mean": 7.684,
+          "min": 7.684,
+          "max": 7.684
+        },
+        "graphics_mib": {
+          "mean": 1.598,
+          "min": 1.598,
+          "max": 1.598
+        },
+        "cpu_one_core_pct": 20.153
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 13.693,
+          "min": 13.693,
+          "max": 13.693
+        },
+        "swap_pss_mib": {
+          "mean": 8.574,
+          "min": 8.574,
+          "max": 8.574
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.288
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 181.898,
+          "min": 180.465,
+          "max": 183.348
+        },
+        "private_mib": {
+          "mean": 140.786,
+          "min": 138.129,
+          "max": 143.273
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.046,
+          "min": 0.0,
+          "max": 0.275
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 83.168,
+          "min": 75.945,
+          "max": 87.02
+        },
+        "private_mib": {
+          "mean": 105.792,
+          "min": 99.48,
+          "max": 110.578
+        },
+        "cpu_one_core_pct": {
+          "mean": 13.813,
+          "min": 12.654,
+          "max": 15.681
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.039,
+          "min": 26.738,
+          "max": 27.34
+        },
+        "private_mib": {
+          "mean": 11.125,
+          "min": 10.891,
+          "max": 11.359
+        },
+        "cpu_one_core_pct": {
+          "mean": 2.157,
+          "min": 0.963,
+          "max": 3.448
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-restored-stream",
+    "samples": 6,
+    "duration_s": 67.64,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 26.949,
+      "min": 25.784,
+      "max": 30.056
+    },
+    "composition_fps": {
+      "mean": 90.048,
+      "min": 89.362,
+      "max": 90.925
+    },
+    "battery_celsius": {
+      "mean": 36.683,
+      "min": 36.6,
+      "max": 36.7
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 22.742,
+      "min": 22.312,
+      "max": 23.137
+    },
+    "mem_available_mib": {
+      "mean": 3362.072,
+      "min": 3301.637,
+      "max": 3433.449
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 94.104,
+          "min": 92.271,
+          "max": 99.932
+        },
+        "swap_pss_mib": {
+          "mean": 39.722,
+          "min": 39.689,
+          "max": 39.744
+        },
+        "graphics_mib": {
+          "mean": 9.57,
+          "min": 9.57,
+          "max": 9.57
+        },
+        "cpu_one_core_pct": 6.032
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 140.782,
+          "min": 139.554,
+          "max": 141.977
+        },
+        "swap_pss_mib": null,
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 9.255
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1030.747,
+          "min": 1030.324,
+          "max": 1031.445
+        },
+        "swap_pss_mib": {
+          "mean": 391.128,
+          "min": 387.282,
+          "max": 396.685
+        },
+        "graphics_mib": {
+          "mean": 174.82,
+          "min": 174.785,
+          "max": 174.84
+        },
+        "cpu_one_core_pct": 29.982
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.539,
+          "min": 44.538,
+          "max": 44.542
+        },
+        "swap_pss_mib": {
+          "mean": 41.277,
+          "min": 41.277,
+          "max": 41.277
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 270.8,
+          "min": 264.21,
+          "max": 274.104
+        },
+        "swap_pss_mib": {
+          "mean": 13.855,
+          "min": 13.855,
+          "max": 13.855
+        },
+        "graphics_mib": {
+          "mean": 233.023,
+          "min": 226.438,
+          "max": 236.316
+        },
+        "cpu_one_core_pct": 24.586
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 34.333,
+          "min": 34.33,
+          "max": 34.338
+        },
+        "swap_pss_mib": {
+          "mean": 8.391,
+          "min": 8.391,
+          "max": 8.391
+        },
+        "graphics_mib": {
+          "mean": 1.598,
+          "min": 1.598,
+          "max": 1.598
+        },
+        "cpu_one_core_pct": 21.038
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 14.294,
+          "min": 14.294,
+          "max": 14.294
+        },
+        "swap_pss_mib": {
+          "mean": 8.031,
+          "min": 8.031,
+          "max": 8.031
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.134
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 170.175,
+          "min": 167.93,
+          "max": 172.582
+        },
+        "private_mib": {
+          "mean": 128.145,
+          "min": 125.426,
+          "max": 130.66
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 87.879,
+          "min": 82.988,
+          "max": 90.34
+        },
+        "private_mib": {
+          "mean": 101.413,
+          "min": 96.473,
+          "max": 103.836
+        },
+        "cpu_one_core_pct": {
+          "mean": 12.709,
+          "min": 11.065,
+          "max": 14.031
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.614,
+          "min": 27.469,
+          "max": 27.895
+        },
+        "private_mib": {
+          "mean": 11.316,
+          "min": 11.316,
+          "max": 11.316
+        },
+        "cpu_one_core_pct": {
+          "mean": 2.486,
+          "min": 1.66,
+          "max": 3.047
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-service-off-no-stream",
+    "samples": 6,
+    "duration_s": 66.82,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 31.255,
+      "min": 26.985,
+      "max": 33.276
+    },
+    "composition_fps": {
+      "mean": 89.779,
+      "min": 89.587,
+      "max": 90.009
+    },
+    "battery_celsius": {
+      "mean": 36.383,
+      "min": 36.3,
+      "max": 36.5
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 13.567,
+      "min": 13.386,
+      "max": 13.743
+    },
+    "mem_available_mib": {
+      "mean": 3837.038,
+      "min": 3771.09,
+      "max": 3892.465
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 101.628,
+          "min": 101.616,
+          "max": 101.653
+        },
+        "swap_pss_mib": {
+          "mean": 76.128,
+          "min": 76.123,
+          "max": 76.136
+        },
+        "graphics_mib": {
+          "mean": 10.047,
+          "min": 10.047,
+          "max": 10.047
+        },
+        "cpu_one_core_pct": 0.299
+      },
+      "stream": {
+        "pss_mib": null,
+        "swap_pss_mib": null,
+        "graphics_mib": null,
+        "cpu_one_core_pct": null
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1060.594,
+          "min": 1059.701,
+          "max": 1061.388
+        },
+        "swap_pss_mib": {
+          "mean": 431.352,
+          "min": 429.9,
+          "max": 432.576
+        },
+        "graphics_mib": {
+          "mean": 176.107,
+          "min": 175.992,
+          "max": 176.164
+        },
+        "cpu_one_core_pct": 30.425
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.545,
+          "min": 44.542,
+          "max": 44.548
+        },
+        "swap_pss_mib": {
+          "mean": 41.277,
+          "min": 41.277,
+          "max": 41.277
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 252.092,
+          "min": 252.04,
+          "max": 252.103
+        },
+        "swap_pss_mib": {
+          "mean": 14.402,
+          "min": 14.402,
+          "max": 14.402
+        },
+        "graphics_mib": {
+          "mean": 215.152,
+          "min": 215.152,
+          "max": 215.152
+        },
+        "cpu_one_core_pct": 10.311
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 21.594,
+          "min": 21.594,
+          "max": 21.594
+        },
+        "swap_pss_mib": {
+          "mean": 9.883,
+          "min": 9.883,
+          "max": 9.883
+        },
+        "graphics_mib": {
+          "mean": 0.887,
+          "min": 0.887,
+          "max": 0.887
+        },
+        "cpu_one_core_pct": 0.0
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 12.847,
+          "min": 12.847,
+          "max": 12.847
+        },
+        "swap_pss_mib": {
+          "mean": 8.586,
+          "min": 8.586,
+          "max": 8.586
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.015
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 154.772,
+          "min": 154.703,
+          "max": 154.863
+        },
+        "private_mib": {
+          "mean": 110.079,
+          "min": 109.758,
+          "max": 110.453
+        },
+        "cpu_one_core_pct": {
+          "mean": 84.527,
+          "min": 82.118,
+          "max": 85.989
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": null,
+        "private_mib": null,
+        "cpu_one_core_pct": null
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 15.902,
+          "min": 15.887,
+          "max": 15.918
+        },
+        "private_mib": {
+          "mean": 8.251,
+          "min": 8.211,
+          "max": 8.289
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.094,
+          "min": 0.0,
+          "max": 0.141
+        }
+      }
+    }
+  },
+  {
+    "scenario": "game-service-off-stream",
+    "samples": 6,
+    "duration_s": 67.86,
+    "foreground_states": [
+      "game"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 30.125,
+      "min": 28.231,
+      "max": 33.842
+    },
+    "composition_fps": {
+      "mean": 119.424,
+      "min": 118.453,
+      "max": 120.0
+    },
+    "battery_celsius": {
+      "mean": 36.1,
+      "min": 36.0,
+      "max": 36.2
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": {
+      "mean": 22.848,
+      "min": 22.575,
+      "max": 23.017
+    },
+    "mem_available_mib": {
+      "mean": 2955.344,
+      "min": 2881.691,
+      "max": 3031.418
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 101.532,
+          "min": 101.528,
+          "max": 101.536
+        },
+        "swap_pss_mib": {
+          "mean": 55.377,
+          "min": 55.267,
+          "max": 55.649
+        },
+        "graphics_mib": {
+          "mean": 10.047,
+          "min": 10.047,
+          "max": 10.047
+        },
+        "cpu_one_core_pct": 0.324
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 110.404,
+          "min": 109.202,
+          "max": 111.659
+        },
+        "swap_pss_mib": {
+          "mean": 64.568,
+          "min": 64.5,
+          "max": 64.621
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 9.932
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1073.76,
+          "min": 1073.612,
+          "max": 1073.985
+        },
+        "swap_pss_mib": {
+          "mean": 424.66,
+          "min": 424.477,
+          "max": 425.055
+        },
+        "graphics_mib": {
+          "mean": 175.328,
+          "min": 175.258,
+          "max": 175.359
+        },
+        "cpu_one_core_pct": 31.432
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.593,
+          "min": 44.589,
+          "max": 44.597
+        },
+        "swap_pss_mib": {
+          "mean": 41.043,
+          "min": 41.043,
+          "max": 41.043
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.0
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 280.661,
+          "min": 272.423,
+          "max": 282.32
+        },
+        "swap_pss_mib": {
+          "mean": 13.664,
+          "min": 13.664,
+          "max": 13.664
+        },
+        "graphics_mib": {
+          "mean": 243.143,
+          "min": 234.91,
+          "max": 244.789
+        },
+        "cpu_one_core_pct": 24.58
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 31.938,
+          "min": 26.139,
+          "max": 40.013
+        },
+        "swap_pss_mib": {
+          "mean": 9.196,
+          "min": 8.914,
+          "max": 9.477
+        },
+        "graphics_mib": {
+          "mean": 7.283,
+          "min": 1.598,
+          "max": 15.293
+        },
+        "cpu_one_core_pct": 20.13
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 14.012,
+          "min": 13.987,
+          "max": 14.017
+        },
+        "swap_pss_mib": {
+          "mean": 8.469,
+          "min": 8.457,
+          "max": 8.48
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.448
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 187.199,
+          "min": 184.305,
+          "max": 189.906
+        },
+        "private_mib": {
+          "mean": 143.856,
+          "min": 141.891,
+          "max": 146.055
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.093,
+          "min": 0.0,
+          "max": 0.417
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 89.388,
+          "min": 84.449,
+          "max": 95.512
+        },
+        "private_mib": {
+          "mean": 101.842,
+          "min": 96.762,
+          "max": 107.828
+        },
+        "cpu_one_core_pct": {
+          "mean": 9.478,
+          "min": 8.852,
+          "max": 10.278
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.652,
+          "min": 27.395,
+          "max": 27.828
+        },
+        "private_mib": {
+          "mean": 11.363,
+          "min": 11.262,
+          "max": 11.492
+        },
+        "cpu_one_core_pct": {
+          "mean": 2.926,
+          "min": 2.077,
+          "max": 4.121
+        }
+      }
+    }
+  },
+  {
+    "scenario": "hub-stream",
+    "samples": 6,
+    "duration_s": 64.92,
+    "foreground_states": [
+      "hub"
+    ],
+    "pc_logical_cores": 12,
+    "system_cpu_pct": {
+      "mean": 10.107,
+      "min": 8.203,
+      "max": 12.01
+    },
+    "composition_fps": {
+      "mean": 0.216,
+      "min": 0.092,
+      "max": 0.464
+    },
+    "battery_celsius": {
+      "mean": 36.017,
+      "min": 36.0,
+      "max": 36.1
+    },
+    "thermal_status": [
+      0
+    ],
+    "gpu_pct": null,
+    "mem_available_mib": {
+      "mean": 3242.8,
+      "min": 2966.613,
+      "max": 3377.887
+    },
+    "roles": {
+      "xphone": {
+        "pss_mib": {
+          "mean": 128.475,
+          "min": 123.611,
+          "max": 144.326
+        },
+        "swap_pss_mib": {
+          "mean": 30.527,
+          "min": 29.873,
+          "max": 33.795
+        },
+        "graphics_mib": {
+          "mean": 28.477,
+          "min": 27.684,
+          "max": 32.445
+        },
+        "cpu_one_core_pct": 0.37
+      },
+      "stream": {
+        "pss_mib": {
+          "mean": 133.604,
+          "min": 132.762,
+          "max": 134.444
+        },
+        "swap_pss_mib": null,
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 4.39
+      },
+      "game": {
+        "pss_mib": {
+          "mean": 1026.326,
+          "min": 1026.177,
+          "max": 1026.63
+        },
+        "swap_pss_mib": {
+          "mean": 742.869,
+          "min": 609.767,
+          "max": 779.224
+        },
+        "graphics_mib": {
+          "mean": 163.594,
+          "min": 163.594,
+          "max": 163.594
+        },
+        "cpu_one_core_pct": 0.863
+      },
+      "shizuku": {
+        "pss_mib": {
+          "mean": 44.42,
+          "min": 44.42,
+          "max": 44.42
+        },
+        "swap_pss_mib": {
+          "mean": 41.039,
+          "min": 41.039,
+          "max": 41.039
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 0.031
+      },
+      "compositor": {
+        "pss_mib": {
+          "mean": 266.562,
+          "min": 266.562,
+          "max": 266.562
+        },
+        "swap_pss_mib": {
+          "mean": 13.645,
+          "min": 13.645,
+          "max": 13.645
+        },
+        "graphics_mib": {
+          "mean": 228.66,
+          "min": 228.66,
+          "max": 228.66
+        },
+        "cpu_one_core_pct": 0.462
+      },
+      "hardware_codec": {
+        "pss_mib": {
+          "mean": 27.705,
+          "min": 27.693,
+          "max": 27.717
+        },
+        "swap_pss_mib": {
+          "mean": 7.84,
+          "min": 7.84,
+          "max": 7.84
+        },
+        "graphics_mib": {
+          "mean": 1.598,
+          "min": 1.598,
+          "max": 1.598
+        },
+        "cpu_one_core_pct": 0.662
+      },
+      "software_codec": {
+        "pss_mib": {
+          "mean": 14.47,
+          "min": 14.47,
+          "max": 14.47
+        },
+        "swap_pss_mib": {
+          "mean": 7.996,
+          "min": 7.996,
+          "max": 7.996
+        },
+        "graphics_mib": {
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "cpu_one_core_pct": 3.343
+      }
+    },
+    "pc": {
+      "pc_hub": {
+        "working_set_mib": {
+          "mean": 166.268,
+          "min": 163.801,
+          "max": 169.066
+        },
+        "private_mib": {
+          "mean": 122.444,
+          "min": 119.777,
+          "max": 125.301
+        },
+        "cpu_one_core_pct": {
+          "mean": 0.096,
+          "min": 0.0,
+          "max": 0.145
+        }
+      },
+      "pc_stream": {
+        "working_set_mib": {
+          "mean": 83.255,
+          "min": 83.164,
+          "max": 83.301
+        },
+        "private_mib": {
+          "mean": 96.547,
+          "min": 96.453,
+          "max": 96.594
+        },
+        "cpu_one_core_pct": {
+          "mean": 3.323,
+          "min": 2.609,
+          "max": 4.023
+        }
+      },
+      "pc_adb": {
+        "working_set_mib": {
+          "mean": 27.65,
+          "min": 27.648,
+          "max": 27.652
+        },
+        "private_mib": {
+          "mean": 11.281,
+          "min": 11.281,
+          "max": 11.281
+        },
+        "cpu_one_core_pct": {
+          "mean": 1.686,
+          "min": 1.439,
+          "max": 2.029
+        }
+      }
+    }
+  }
+]

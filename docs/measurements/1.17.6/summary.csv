@@ -1,0 +1,10 @@
+﻿scenario,duration_s,xphone_pss_mib,xphone_cpu_one_core_pct,stream_pss_mib,stream_cpu_one_core_pct,pc_stream_working_set_mib,pc_stream_cpu_one_core_pct,system_cpu_pct,gpu_pct,composition_fps,battery_celsius
+game-handle-stream,67.92,109.281,6.272,107.896,9.349,84.206,12.214,28.211,22.666,89.62,35.933
+game-huds-no-stream,67.42,112.95,8.054,,,,,34.031,13.511,89.587,36.15
+game-huds-stream-repeat,67.75,113.695,7.292,133.674,10.317,87.614,12.52,30.009,22.514,89.92,36.1
+game-huds-stream,68.16,107.37,7.057,99.034,9.683,79.072,12.276,29.374,22.991,90.17,36.2
+game-panel-stream,68.13,186.859,6.766,113.528,9.585,83.168,13.813,28.331,28.247,89.946,36.033
+game-restored-stream,67.64,94.104,6.032,140.782,9.255,87.879,12.709,26.949,22.742,90.048,36.683
+game-service-off-no-stream,66.82,101.628,0.299,,,,,31.255,13.567,89.779,36.383
+game-service-off-stream,67.86,101.532,0.324,110.404,9.932,89.388,9.478,30.125,22.848,119.424,36.1
+hub-stream,64.92,128.475,0.37,133.604,4.39,83.255,3.323,10.107,,0.216,36.017

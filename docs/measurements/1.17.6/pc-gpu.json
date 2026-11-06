@@ -1,0 +1,398 @@
+[
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 1.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 9.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97964032,
+        "SharedUsage": 12099584
+      }
+    ]
+  },
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 1.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 10.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97968128,
+        "SharedUsage": 15966208
+      }
+    ]
+  },
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 1.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 10.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97964032,
+        "SharedUsage": 12099584
+      }
+    ]
+  },
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 7.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97964032,
+        "SharedUsage": 12099584
+      }
+    ]
+  },
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 1.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 10.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97964032,
+        "SharedUsage": 12099584
+      }
+    ]
+  },
+  {
+    "engines": [
+      {
+        "engine": "3D",
+        "percent": 1.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security_1",
+        "percent": 0.0
+      },
+      {
+        "engine": "LegacyOverlay",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoDecode",
+        "percent": 9.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      },
+      {
+        "engine": "Security",
+        "percent": 0.0
+      },
+      {
+        "engine": "VideoEncode",
+        "percent": 0.0
+      },
+      {
+        "engine": "OFA_0",
+        "percent": 0.0
+      },
+      {
+        "engine": "VR",
+        "percent": 0.0
+      },
+      {
+        "engine": "Copy",
+        "percent": 0.0
+      }
+    ],
+    "memory": [
+      {
+        "DedicatedUsage": 97964032,
+        "SharedUsage": 12099584
+      }
+    ]
+  }
+]

@@ -1,0 +1,864 @@
+{
+  "scenario": "hub-stream",
+  "samples": [
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 396668,
+        "MemAvailable": 3037812,
+        "Cached": 2719280
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 39.9,
+        "BAT": 36.1,
+        "SKIN": 36.8
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.839999999996508,
+      "system_cpu_total_pct": 12.009747041076812,
+      "composition_fps": 0.09225092250925482,
+      "elapsed_s": 10.84,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28358,
+          "rss_kib": 31048,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 0.36900369003701927,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.46125461254627415,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.690036900370193,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 79769,
+          "rss_kib": 177896,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 4.79704797048125,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56179,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21329,
+          "rss_kib": 119408,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.2767527675277644,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029940,
+          "rss_kib": 546040,
+          "swap_pss_kib": 617503,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 0.7380073800740385,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 88597,
+          "rss_kib": 190140,
+          "swap_pss_kib": 7974,
+          "graphics_kib": 33224,
+          "cpu_one_core_pct": 0.5535055350555288,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59193,
+          "rss_kib": 112600,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 171757568,
+            "private_bytes": 125595648,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87203840,
+            "private_bytes": 101138432,
+            "cpu_one_core_pct": 3.333410629810878
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16871424,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 1.4493089694829904
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 361
+    },
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 815716,
+        "MemAvailable": 3458956,
+        "Cached": 2722084
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 40.4,
+        "BAT": 36.0,
+        "SKIN": 36.7
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.779999999998836,
+      "system_cpu_total_pct": 9.922951202428209,
+      "composition_fps": 0.1855287569573484,
+      "elapsed_s": 21.62,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28358,
+          "rss_kib": 31048,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 0.4638218923933711,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.3710575139146968,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.061224489796249,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 80114,
+          "rss_kib": 178240,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.8961038961043166,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56179,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21337,
+          "rss_kib": 119416,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.0927643784786742,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029468,
+          "rss_kib": 372044,
+          "swap_pss_kib": 791027,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 0.6493506493507195,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 67381,
+          "rss_kib": 172940,
+          "swap_pss_kib": 3958,
+          "graphics_kib": 28348,
+          "cpu_one_core_pct": 0.3710575139146968,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59197,
+          "rss_kib": 112604,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 172761088,
+            "private_bytes": 126533632,
+            "cpu_one_core_pct": 0.14367816091954022
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87203840,
+            "private_bytes": 101138432,
+            "cpu_one_core_pct": 4.022988505747127
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16871424,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 2.0114942528735633
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 360
+    },
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 757772,
+        "MemAvailable": 3421720,
+        "Cached": 2747944
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 40.0,
+        "BAT": 36.0,
+        "SKIN": 36.7
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.85000000000582,
+      "system_cpu_total_pct": 10.979983801920634,
+      "composition_fps": 0.18433179723492416,
+      "elapsed_s": 32.47,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28366,
+          "rss_kib": 31064,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 0.6451612903222346,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.3686635944698483,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.2258064516111724,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.09216589861746208,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 80462,
+          "rss_kib": 178588,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 4.423963133638179,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56179,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21333,
+          "rss_kib": 119412,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.18433179723492416,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029764,
+          "rss_kib": 384684,
+          "swap_pss_kib": 778683,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 1.0138248847920828,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 74778,
+          "rss_kib": 180344,
+          "swap_pss_kib": 3958,
+          "graphics_kib": 28348,
+          "cpu_one_core_pct": 0.3686635944698483,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59181,
+          "rss_kib": 112588,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.09216589861746208,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 173768704,
+            "private_bytes": 128040960,
+            "cpu_one_core_pct": 0.14493089694829903
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87347200,
+            "private_bytes": 101285888,
+            "cpu_one_core_pct": 3.623272423707476
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16871424,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 1.5942398664312893
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 360
+    },
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 595028,
+        "MemAvailable": 3367468,
+        "Cached": 2856788
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 40.3,
+        "BAT": 36.0,
+        "SKIN": 36.6
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.779999999998836,
+      "system_cpu_total_pct": 9.330059628200626,
+      "composition_fps": 0.46382189239337107,
+      "elapsed_s": 43.25,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28376,
+          "rss_kib": 31084,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 1.1131725417440905,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.5565862708720453,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 2.9684601113175746,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 80807,
+          "rss_kib": 178940,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.9888682745829915,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56176,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21325,
+          "rss_kib": 119412,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.1855287569573484,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029536,
+          "rss_kib": 384612,
+          "swap_pss_kib": 778567,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 0.3710575139146968,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 67881,
+          "rss_kib": 173448,
+          "swap_pss_kib": 3958,
+          "graphics_kib": 28348,
+          "cpu_one_core_pct": 0.1855287569573484,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59181,
+          "rss_kib": 112588,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 174567424,
+            "private_bytes": 128569344,
+            "cpu_one_core_pct": 0.1447161248496107
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87347200,
+            "private_bytes": 101285888,
+            "cpu_one_core_pct": 3.328470871541046
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16875520,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 1.5918773733457177
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 360
+    },
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 546164,
+        "MemAvailable": 3313516,
+        "Cached": 2857016
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 39.8,
+        "BAT": 36.0,
+        "SKIN": 36.5
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.829999999987194,
+      "system_cpu_total_pct": 8.203397719339078,
+      "composition_fps": 0.09233610341654501,
+      "elapsed_s": 54.08,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28378,
+          "rss_kib": 31088,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 0.6463527239158151,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.46168051708272506,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.785780240078345,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.09233610341654501,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 81154,
+          "rss_kib": 179288,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 4.893813481076886,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56175,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21325,
+          "rss_kib": 119412,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.277008310249635,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029528,
+          "rss_kib": 384656,
+          "swap_pss_kib": 778515,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 0.46168051708272506,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 67805,
+          "rss_kib": 173372,
+          "swap_pss_kib": 3958,
+          "graphics_kib": 28348,
+          "cpu_one_core_pct": 0.277008310249635,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59181,
+          "rss_kib": 112588,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 175931392,
+            "private_bytes": 130224128,
+            "cpu_one_core_pct": 0.14388986094488157
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87347200,
+            "private_bytes": 101285888,
+            "cpu_one_core_pct": 3.021687079842513
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16875520,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 1.4388986094488156
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 360
+    },
+    {
+      "system_memory_kib": {
+        "MemTotal": 11379712,
+        "MemFree": 556348,
+        "MemAvailable": 3324292,
+        "Cached": 2857628
+      },
+      "usb_powered": true,
+      "thermal_status": 0,
+      "thermal_celsius": {
+        "AP": 39.6,
+        "BAT": 36.0,
+        "SKIN": 36.4
+      },
+      "display_mode_hz": 120.00001,
+      "gpu_busy_raw": [
+        0,
+        0
+      ],
+      "foreground": "hub",
+      "interval_s": 10.840000000025611,
+      "system_cpu_total_pct": 10.19389295251364,
+      "composition_fps": 0.2767527675270214,
+      "elapsed_s": 64.92,
+      "processes": {
+        "vendor_codec": {
+          "pss_kib": 4078,
+          "rss_kib": 4372,
+          "swap_pss_kib": 3536,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hardware_codec": {
+          "pss_kib": 28382,
+          "rss_kib": 31096,
+          "swap_pss_kib": 8028,
+          "graphics_kib": 1636,
+          "cpu_one_core_pct": 0.738007380072057,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "compositor": {
+          "pss_kib": 272959,
+          "rss_kib": 266636,
+          "swap_pss_kib": 13972,
+          "graphics_kib": 234148,
+          "cpu_one_core_pct": 0.5535055350540428,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "software_codec": {
+          "pss_kib": 14817,
+          "rss_kib": 13440,
+          "swap_pss_kib": 8188,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 3.321033210324257,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "shizuku": {
+          "pss_kib": 45486,
+          "rss_kib": 38208,
+          "swap_pss_kib": 42024,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_server": {
+          "pss_kib": 81495,
+          "rss_kib": 179624,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 4.335793357923335,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "stream_cleanup": {
+          "pss_kib": 56176,
+          "rss_kib": 145796,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game": {
+          "pss_kib": 21325,
+          "rss_kib": 119412,
+          "swap_pss_kib": 6898,
+          "graphics_kib": 1256,
+          "cpu_one_core_pct": 0.2767527675270214,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "game_aux": {
+          "pss_kib": 1029536,
+          "rss_kib": 384672,
+          "swap_pss_kib": 778507,
+          "graphics_kib": 166264,
+          "cpu_one_core_pct": 0.64575645756305,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub": {
+          "pss_kib": 67793,
+          "rss_kib": 173360,
+          "swap_pss_kib": 3958,
+          "graphics_kib": 28348,
+          "cpu_one_core_pct": 0.3690036900360285,
+          "commands_cpu_one_core_pct": 0.0
+        },
+        "hub_shell": {
+          "pss_kib": 59181,
+          "rss_kib": 112588,
+          "swap_pss_kib": 26632,
+          "graphics_kib": 0,
+          "cpu_one_core_pct": 0.0,
+          "commands_cpu_one_core_pct": 0.0
+        }
+      },
+      "pc": {
+        "processes": [
+          {
+            "role": "pc_hub",
+            "rss_bytes": 177278976,
+            "private_bytes": 131387392,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_stream",
+            "rss_bytes": 87347200,
+            "private_bytes": 101285888,
+            "cpu_one_core_pct": 2.608514190315618
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 12120064,
+            "private_bytes": 3264512,
+            "cpu_one_core_pct": 0.0
+          },
+          {
+            "role": "pc_adb",
+            "rss_bytes": 16875520,
+            "private_bytes": 8564736,
+            "cpu_one_core_pct": 2.028844370245481
+          }
+        ]
+      },
+      "battery_temperature_tenths_c": 360
+    }
+  ],
+  "notes": [
+    "100% process CPU = one logical core. System CPU = percentage of all device cores.",
+    "Observer uses ADB and meminfo; included in system load. Memory collection is sequential.",
+    "USB powered: battery consumption and battery life cannot be inferred.",
+    "FPS = whole-screen composition, not unique game frames. Fixed settings scene, not a match.",
+    "Shared codec/compositor CPU is reported separately, not all attributable to XPhone."
+  ]
+}

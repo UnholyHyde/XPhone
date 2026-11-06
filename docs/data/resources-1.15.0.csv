@@ -1,4 +1,0 @@
-﻿scenario,duration_seconds,ram_min_mib,ram_mean_mib,ram_max_mib,cpu_percent_one_core_including_commands
-Хаб — установившийся расход,16.0,140.1,140.3,140.7,0.31
-Игра — только язычок,33.2,121.4,123.8,131.9,7.69
-Игра — большая панель,33.1,194.1,196.9,209.2,8.42

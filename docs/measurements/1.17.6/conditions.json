@@ -1,0 +1,30 @@
+{
+  "android_app": "1.17.6",
+  "android_release": "17",
+  "android_sdk": 37,
+  "display_physical_pixels": [
+    1440,
+    3120
+  ],
+  "density_dpi": 600,
+  "display_mode_hz_observed": 120,
+  "stream": {
+    "transport": "USB",
+    "max_size": 2336,
+    "max_fps": 60,
+    "video_bitrate_mbps_limit": 30,
+    "video_buffer_ms": 0,
+    "audio_buffer_ms": 30,
+    "audio_source": "playback",
+    "stay_awake": true
+  },
+  "pc_folder_bytes": 173705005,
+  "apk_bytes": 1004326,
+  "scene": "Mobile Legends: settings screen; no match",
+  "battery": "USB powered; charging; not a battery runtime experiment",
+  "privacy": "No device identifiers, nicknames or accounts are included.",
+  "pc_app": "1.4.1",
+  "pc_window_note": "Initial mirror about 935x463 pixels; after reconnection about 1824x873. PC rendering costs are not an identical-window-size A/B.",
+  "hub_orientation": "landscape",
+  "scenarios_note": "Game settings page restored after each hub visit. Game processes kept the same start IDs. Service-off restores user profile settings, so this is not a pure code-only causal comparison."
+}
