@@ -53,7 +53,7 @@ android/gradlew.bat -p android assembleRelease lintDebug
 `TouchTrace`/`TouchGlow` — касания; `GamePower` — режимы; `NativeRecorder` — штатная запись Samsung.
 
 Сборка и программные проверки не заменяют проверку на реальном телефоне. Основная тестовая
-модель — Samsung Galaxy S25 Ultra; Ethernet-переходник и другие модели требуют реального теста.
+конфигурация — одно устройство Samsung с One UI; Ethernet-переходник и другие модели требуют реального теста.
 
 ## Сторонние компоненты
 
