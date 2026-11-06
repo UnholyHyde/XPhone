@@ -48,11 +48,11 @@ public static class PhoneCheck
         try { raw = await adb.ListDevicesAsync(); } catch { raw = new(); }
         foreach (var d in raw.Where(d => d.IsReady)) await adb.FillInfoAsync(d);
 
-        progress?.Invoke("Ищем телефоны в сети Wi-Fi…");
+        progress?.Invoke("Ищем телефоны в локальной сети…");
         var mdns = await vm.Watcher.ScanWifiAsync();
 
         var usb = raw.Where(d => d.Transport == Transport.Usb).ToList();
-        var wifi = raw.Where(d => d.Transport == Transport.Wifi).ToList();
+        var wifi = raw.Where(d => d.IsNetwork).ToList();
         var usbReady = usb.FirstOrDefault(d => d.IsReady);
         var wifiReady = wifi.FirstOrDefault(d => d.IsReady);
         var anyReady = vm.Session?.Device ?? (vm.Selected is { IsReady: true } sel ? raw.FirstOrDefault(r => r.Serial == sel.Serial) : null) ?? usbReady ?? wifiReady;
@@ -70,7 +70,7 @@ public static class PhoneCheck
                 "Выньте и вставьте кабель. Если не помогает — в «Параметрах разработчика» нажмите «Отозвать авторизации отладки по USB» и подключите кабель снова."));
         else if (wifiReady != null)
             items.Add(new(CheckStatus.Info, "По кабелю телефон не подключён",
-                "Это нормально, если вы работаете по Wi-Fi. Для кабеля: Настройки → Параметры разработчика → «Отладка по USB» → включить."));
+                "Это нормально, если вы работаете по Wi-Fi или LAN. Для кабеля: Настройки → Параметры разработчика → «Отладка по USB» → включить."));
         else
             items.Add(new(CheckStatus.Warn, "Телефон по кабелю не виден",
                 "1. " + DevMode + "\n" +
@@ -92,15 +92,15 @@ public static class PhoneCheck
         var vpnOnRoute = Core.NetCheck.VpnOnRouteTo(phoneIp);
         var vpnAny = vpnOnRoute ?? (wifiReady == null ? Core.NetCheck.ActiveVpnName() : null);
         if (vpnOnRoute != null)
-            items.Add(new(CheckStatus.Warn, "По Wi-Fi мешает VPN", Core.NetCheck.VpnHint(vpnOnRoute)));
+            items.Add(new(CheckStatus.Warn, "Сетевому подключению мешает VPN", Core.NetCheck.VpnHint(vpnOnRoute)));
         else if (vpnAny != null && phoneIp == null)
             items.Add(new(CheckStatus.Info, $"Включён VPN «{vpnAny}»",
                 "Если телефон по Wi-Fi не находится — скорее всего, мешает VPN. " + Core.NetCheck.VpnHint(vpnAny)));
 
         // ── Wi-Fi ──
         if (wifiReady != null)
-            items.Add(new(CheckStatus.Ok, "Отладка по Wi-Fi работает",
-                $"{wifiReady.DisplayName} подключён по Wi-Fi" + (wifiReady.IpAddress != null ? $" ({wifiReady.IpAddress})." : ".")));
+            items.Add(new(CheckStatus.Ok, "Подключение по локальной сети работает",
+                $"{wifiReady.DisplayName} подключён: {wifiReady.TransportText}" + (wifiReady.IpAddress != null ? $" ({wifiReady.IpAddress})." : ".")));
         else if (wifi.Any(d => !d.IsReady))
             items.Add(new(CheckStatus.Warn, "Телефон по Wi-Fi не отвечает",
                 "Проверьте, что телефон разблокирован и в той же сети. Выключите и включите «Отладку по Wi-Fi» на телефоне."));

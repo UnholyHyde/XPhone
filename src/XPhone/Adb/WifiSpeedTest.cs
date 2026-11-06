@@ -60,7 +60,7 @@ public static class WifiSpeedTest
         if (NetCheck.VpnOnRouteTo(ip) is { } vpn) return (null, NetCheck.VpnHint(vpn));
 
         progress("Готовим проверку…");
-        var phoneWifi = await ReadPhoneWifiAsync(adb, d);
+        var phoneWifi = d.Transport == Transport.Wifi ? await ReadPhoneWifiAsync(adb, d) : null;
         var (pcName, pcMbps, pcWifi) = NetCheck.LinkTo(ip);
 
         try
@@ -83,7 +83,7 @@ public static class WifiSpeedTest
             // ── Задержка (радио уже «проснулось») ──
             progress("Меряем задержку…");
             var (ping, jitter, lost, sent) = await PingAsync(adb, d, ip);
-            if (ping == null) return (null, "Телефон не отвечает по Wi-Fi. Проверьте, что он в той же сети.");
+            if (ping == null) return (null, "Телефон не отвечает по сети. Проверьте, что он в той же сети.");
 
             return (new WifiSpeedResult(mbps.Value, ping.Value, jitter, lost, sent, phoneWifi, pcMbps, pcName, pcWifi, viaAdb), null);
         }

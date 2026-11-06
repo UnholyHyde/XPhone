@@ -45,6 +45,8 @@ public final class Prefs {
     public static boolean enabled(Context c) { return get(c, ENABLED, true); }
     public static boolean autoPanel(Context c) { return get(c, AUTO_PANEL, false); }
     public static boolean welcome(Context c) { return get(c, WELCOME, true); }
+    public static int handleEdge(Context c){int edge=getInt(c,"handle_edge",handleLeft(c)?0:1);return edge>=0&&edge<=3?edge:1;}
+    public static void setHandleEdge(Context c,int edge){if(edge<0||edge>3)return;SharedPreferences.Editor edit=sp(c).edit().putInt("handle_edge",edge);if(edge<2)edit.putBoolean(HANDLE_LEFT,edge==0);edit.apply();}
     public static boolean handleLeft(Context c) { return get(c, HANDLE_LEFT, false); }
     public static int getInt(Context c, String key, int def) { return sp(c).getInt(key, def); }
     public static void putInt(Context c, String key, int v) { sp(c).edit().putInt(key, v).apply(); }

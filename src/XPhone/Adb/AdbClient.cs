@@ -8,7 +8,7 @@ namespace XPhone.Adb;
 public sealed record MdnsService(string Name, string Type, string Address)
 {
     public bool IsPairing => Type.Contains("pairing", StringComparison.OrdinalIgnoreCase);
-    public bool IsConnect => Type.Contains("connect", StringComparison.OrdinalIgnoreCase);
+    public bool IsConnect => Type.Contains("connect", StringComparison.OrdinalIgnoreCase) || Type.Equals("_adb._tcp", StringComparison.OrdinalIgnoreCase);
     public string Ip => Address.Split(':')[0];
 }
 
@@ -166,7 +166,7 @@ public sealed class AdbClient
                 if (p.StartsWith("model:", StringComparison.Ordinal)) model = p[6..].Replace('_', ' ');
                 if (p.StartsWith("usb:", StringComparison.Ordinal)) usbField = true;
             }
-            var transport = !usbField && PhoneDevice.LooksLikeWifi(serial) ? Transport.Wifi : Transport.Usb;
+            var transport = !usbField && PhoneDevice.LooksLikeWifi(serial) ? Transport.Network : Transport.Usb;
             list.Add(new PhoneDevice { Serial = serial, State = state, Transport = transport, Model = model });
         }
         return list;
@@ -185,7 +185,7 @@ public sealed class AdbClient
             "getprop ro.build.version.sdk",
             "getprop ro.product.manufacturer",
             "wm size",
-            "ip -o -4 addr show wlan0",
+            "ip -o -4 addr show",
         });
         var r = await ProcessRunner.RunAsync(AdbPath, new[] { "-s", d.Serial, "shell", cmd }, 8000, ct: ct);
         if (r.TimedOut || string.IsNullOrEmpty(r.Output)) return;
@@ -207,8 +207,7 @@ public sealed class AdbClient
             d.ScreenShort = Math.Min(a, b);
             d.ScreenLong = Math.Max(a, b);
         }
-        var ip = Regex.Match(Get(6), @"inet (\d+\.\d+\.\d+\.\d+)");
-        if (ip.Success) d.IpAddress = ip.Groups[1].Value;
+        d.UpdateNetworkAddresses(PhoneAddress.Parse(Get(6)));
     }
 
     /// <summary>
@@ -247,6 +246,13 @@ public sealed class AdbClient
         bool ok = o.Contains("connected to") && !o.Contains("cannot") && !o.Contains("failed");
         return (ok, r.Output);
     }
+
+    /// <summary>Explicit user action only: restart adbd in classic TCP/IP mode for Ethernet.</summary>
+    public Task<ProcessResult> PrepareLanAsync(PhoneDevice usbDevice) => usbDevice.Transport != Transport.Usb || !usbDevice.IsReady
+        ? throw new InvalidOperationException("Для подготовки LAN нужен телефон по USB с разрешённой отладкой.")
+        : RunAsync(15000, "-s", usbDevice.Serial, "tcpip", "5555");
+
+    public Task<ProcessResult> DisableTcpAsync(PhoneDevice device) => RunAsync(12000, "-s", device.Serial, "usb");
 
     public Task<ProcessResult> DisconnectAsync(string address) => RunAsync(5000, "disconnect", address);
 

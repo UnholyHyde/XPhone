@@ -40,14 +40,24 @@ public final class Ui {
 
     public static void setTheme(Context c, String t) {
         Prefs.sp(c).edit().putString("theme", t).apply();
-        apply(t);
+        load(c);
     }
 
     /** Вызывать перед построением экрана или панели. */
-    public static void load(Context c) { apply(theme(c)); }
+    public static void load(Context c) {
+        apply(theme(c));
+        if(Prefs.sp(c).contains("accent_color")) {
+            ACCENT=0xFF000000|Prefs.getInt(c,"accent_color",0xFFFFFF);
+            ON_ACCENT=AccentColor.foreground(ACCENT);
+            THUMB_ON=ON_ACCENT;
+        }
+    }
+    public static void setAccent(Context c,int color){Prefs.putInt(c,"accent_color",color|0xFF000000);load(c);}
+    public static void resetAccent(Context c){Prefs.sp(c).edit().remove("accent_color").apply();load(c);}
+    public static int overlayFill(Context c){return (Prefs.getInt(c,"panel_opacity",35)*255/100<<24)|0x0017191E;}
+
 
     private static void apply(String t) {
-        if (t.equals(current)) return;
         current = t;
         if (THEME_GLASS.equals(t)) {
             GLASS = true;
@@ -85,6 +95,15 @@ public final class Ui {
         if (weight >= 700) return bold;
         if (weight >= 600) return semibold;
         return regular;
+    }
+
+    public static boolean hintsEnabled(Context c){return Prefs.get(c,"show_hints",true);}
+
+    /** Optional explanations only; never use for controls, values or error messages. */
+    public static TextView hint(Context c,CharSequence value,float sp,int color,int weight){
+        TextView view=text(c,value,sp,color,weight);
+        if(!hintsEnabled(c))view.setVisibility(View.GONE);
+        return view;
     }
 
     public static TextView text(Context c, CharSequence s, float sp, int color, int weight) {
@@ -174,7 +193,16 @@ public final class Ui {
             t.setMinHeight(dp(c, 36));
             if (on) t.setBackground(box(c, GLASS ? 0x2EFFFFFF : ACCENT, 0, GLASS ? 999 : 10));
             final int idx = i;
-            t.setOnClickListener(v -> onPick.accept(idx));
+            t.setSelected(on);
+            t.setOnClickListener(v -> {
+                for(int j=0;j<row.getChildCount();j++){
+                    TextView item=(TextView)row.getChildAt(j);boolean active=j==idx;
+                    item.setSelected(active);item.setTextColor(active?(GLASS?0xFFFFFFFF:ON_ACCENT):MUTED);
+                    item.setTypeface(font(c,active?700:600));
+                    item.setBackground(active?box(c,GLASS?0x2EFFFFFF:ACCENT,0,GLASS?999:10):null);
+                }
+                onPick.accept(idx);
+            });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
             if (i > 0) lp.leftMargin = dp(c, 4);
             row.addView(t, lp);

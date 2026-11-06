@@ -14,6 +14,13 @@ public sealed class DeviceWatcher : IDisposable
     private readonly SemaphoreSlim _wifiLock = new(1, 1);
     private CancellationTokenSource? _cts;
     private List<PhoneDevice> _raw = new();
+    private readonly ConcurrentDictionary<string, byte> _networkTargets = new();
+    public void SetNetworkTargets(IEnumerable<string> targets)
+    {
+        _networkTargets.Clear();
+        foreach (var target in targets.Take(8)) if (NetworkEndpoint.TryParse(target, out var e)) _networkTargets[e.Address] = 0;
+    }
+
     private DateTime _lastWifiScan = DateTime.MinValue;
 
     /// <summary>Новый список телефонов (вызывается не из потока окна).</summary>
@@ -91,7 +98,7 @@ public sealed class DeviceWatcher : IDisposable
             if (!await _adb.EnsureServerAsync()) return new();
             var services = await _adb.MdnsServicesAsync(ct);
             var known = _raw.Select(d => d.Serial).ToList();
-            var knownIps = Current.Where(d => d.Transport == Transport.Wifi && d.IpAddress != null)
+            var knownIps = Current.Where(d => d.IsNetwork && d.IpAddress != null)
                                   .Select(d => d.IpAddress!).ToHashSet();
             foreach (var s in services.Where(x => x.IsConnect))
             {
@@ -102,6 +109,23 @@ public sealed class DeviceWatcher : IDisposable
                 if (already) continue;
                 // Подключится, только если этот компьютер уже сопряжён с телефоном.
                 await _adb.ConnectAsync(s.Address);
+            }
+            // Reconnect only addresses the user saved; do not scan a subnet.
+            foreach (var target in _networkTargets.Keys)
+            {
+                if (known.Contains(target) && Current.Any(d => d.Serial == target && d.IsReady)) continue;
+                if (!NetworkEndpoint.TryParse(target, out var endpoint) || Core.NetCheck.VpnOnRouteTo(endpoint.Host) != null) continue;
+                try
+                {
+                    using var client = new System.Net.Sockets.TcpClient();
+                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    timeout.CancelAfter(400);
+                    await client.ConnectAsync(endpoint.Host, endpoint.Port, timeout.Token);
+                    if (_raw.Any(d => d.Serial == endpoint.Address && !d.IsReady)) await _adb.DisconnectAsync(endpoint.Address);
+                    await _adb.ConnectAsync(endpoint.Address);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
+                catch (System.Net.Sockets.SocketException) { }
             }
             return services;
         }
@@ -158,8 +182,8 @@ public sealed class DeviceWatcher : IDisposable
             var dedup = new List<PhoneDevice>();
             foreach (var d in result)
             {
-                if (d.Transport == Transport.Wifi && d.HardwareSerial != null &&
-                    dedup.Any(x => x.Transport == Transport.Wifi && x.HardwareSerial == d.HardwareSerial))
+                if (d.IsNetwork && d.HardwareSerial != null &&
+                    dedup.Any(x => x.Transport == d.Transport && x.HardwareSerial == d.HardwareSerial))
                     continue;
                 dedup.Add(d);
             }
@@ -181,5 +205,7 @@ public sealed class DeviceWatcher : IDisposable
         to.ScreenShort = from.ScreenShort;
         to.ScreenLong = from.ScreenLong;
         to.IpAddress = from.IpAddress;
+        to.Addresses = from.Addresses;
+        if (to.IsNetwork) to.Transport = from.Transport;
     }
 }

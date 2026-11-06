@@ -62,6 +62,9 @@ public partial class MainWindow : Window
     private void Pair_Click(object sender, RoutedEventArgs e) =>
         new PairWindow(_vm) { Owner = this }.ShowDialog();
 
+    private void Network_Click(object sender, RoutedEventArgs e) =>
+        new NetworkWindow(_vm) { Owner = this }.ShowDialog();
+
     private void Check_Click(object sender, RoutedEventArgs e) =>
         new CheckWindow(_vm, firstRun: false) { Owner = this }.ShowDialog();
 
@@ -70,6 +73,8 @@ public partial class MainWindow : Window
     private async void SpeedTest_Click(object sender, RoutedEventArgs e) => await _vm.RunSpeedTestAsync();
 
     private void ApplySpeed_Click(object sender, RoutedEventArgs e) => _vm.ApplySpeed();
+
+    private void Support_Click(object sender, RoutedEventArgs e) => new SupportWindow { Owner = this }.ShowDialog();
 
     private void CloseBanner_Click(object sender, RoutedEventArgs e) => _vm.HideBanner();
 

@@ -1,6 +1,6 @@
 namespace XPhone.Adb;
 
-public enum Transport { Usb, Wifi }
+public enum Transport { Usb, Lan, Wifi, Network }
 
 /// <summary>Одно подключение к телефону (по USB или по Wi-Fi). Один телефон может быть виден дважды.</summary>
 public sealed class PhoneDevice
@@ -9,7 +9,7 @@ public sealed class PhoneDevice
     public required string Serial { get; init; }
     /// <summary>device, unauthorized, offline, authorizing, connecting…</summary>
     public required string State { get; init; }
-    public required Transport Transport { get; init; }
+    public required Transport Transport { get; set; }
     public string Model { get; set; } = "";
 
     // Заполняется после опроса телефона (только в состоянии device).
@@ -20,6 +20,21 @@ public sealed class PhoneDevice
     public int ScreenShort { get; set; }
     public int ScreenLong { get; set; }
     public string? IpAddress { get; set; }
+    public IReadOnlyList<PhoneAddress> Addresses { get; set; } = Array.Empty<PhoneAddress>();
+    public bool IsNetwork => Transport != Transport.Usb;
+
+    internal void UpdateNetworkAddresses(IReadOnlyList<PhoneAddress> addresses)
+    {
+        Addresses = addresses;
+        if (IsNetwork)
+        {
+            if (NetworkEndpoint.TryParse(Serial, out var endpoint)) IpAddress = endpoint.Host;
+            else IpAddress = addresses.Count == 1 ? addresses[0].Ip : null;
+            var matched = addresses.FirstOrDefault(a => a.Ip == IpAddress);
+            Transport = matched?.IsLan == true ? Transport.Lan : matched?.IsWifi == true ? Transport.Wifi : Transport.Network;
+        }
+        else IpAddress = addresses.OrderByDescending(a => a.IsLan).FirstOrDefault()?.Ip;
+    }
 
     public bool IsReady => State == "device";
     public bool IsSamsung => (Manufacturer ?? Model).Contains("samsung", StringComparison.OrdinalIgnoreCase)
@@ -32,7 +47,7 @@ public sealed class PhoneDevice
         !string.IsNullOrWhiteSpace(Name) ? Name! :
         !string.IsNullOrWhiteSpace(Model) ? Model : "Android-телефон";
 
-    public string TransportText => Transport == Transport.Usb ? "USB" : "Wi-Fi";
+    public string TransportText => Transport switch { Transport.Usb => "USB", Transport.Wifi => "Wi-Fi", Transport.Lan => "LAN", _ => "Сеть" };
 
     public string StateText => State switch
     {

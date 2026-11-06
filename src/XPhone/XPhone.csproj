@@ -9,7 +9,7 @@
     <AssemblyName>XPhone</AssemblyName>
     <RootNamespace>XPhone</RootNamespace>
     <Product>XPhone</Product>
-    <Version>1.3.0</Version>
+    <Version>1.4.2</Version>
     <Description>XPhone — экран и звук Android-телефона на ПК (на основе scrcpy)</Description>
     <ApplicationIcon>Assets\xphone.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>

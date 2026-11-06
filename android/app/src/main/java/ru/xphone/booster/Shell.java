@@ -70,6 +70,40 @@ public final class Shell {
     }
 
     /** Выполнить в фоне, результат — в главном потоке. */
+    public static boolean touchAvailable(Context c) {
+        IShellService s=bind(c.getApplicationContext());
+        try { return s!=null && s.touchAvailable(); } catch(Exception e){return false;}
+    }
+    public static boolean startTouch(Context c, ITouchListener listener) {
+        IShellService s=bind(c.getApplicationContext());
+        try { return s!=null && s.startTouch(listener); } catch(Exception e){return false;}
+    }
+    public static void stopTouch() {
+        IShellService s=service;
+        try { if(s!=null)s.stopTouch(); } catch(Exception ignored){}
+    }
+
+    public static boolean privacyAvailable(Context c){IShellService s=bind(c.getApplicationContext());try{return s!=null&&s.privacyAvailable();}catch(Exception e){return false;}}
+    public static String streamPrivacy(Context c,boolean active){IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.streamPrivacy(active,android.os.Process.myUid()/100000);}catch(Exception e){return "ERROR";}}
+    public static String resumeGame(Context c,String component){IShellService s=bind(c.getApplicationContext());try{return s==null?"UNAVAILABLE":s.resumeGame(component,android.os.Process.myUid()/100000);}catch(Exception e){return "UNAVAILABLE";}}
+    public static String restartApp(Context c,String component){IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.restartApp(component,android.os.Process.myUid()/100000);}catch(Exception e){return "ERROR";}}
+    public static String startRecord(Context c,String name,int mbps){IShellService s=bind(c.getApplicationContext());try{return s==null?"ERROR":s.startRecord(name,mbps);}catch(Exception e){return "ERROR";}}
+    public static String stopRecord(Context c){IShellService s=service;try{return s==null?"ERROR":s.stopRecord();}catch(Exception e){return "ERROR";}}
+    public static String recordState(Context c){IShellService s=service;try{return s==null?"ERROR":s.recordState();}catch(Exception e){return "ERROR";}}
+    public static boolean windowAvailable(Context c) {
+        IShellService s=bind(c.getApplicationContext());try{return s!=null&&s.windowAvailable();}catch(Exception e){return false;}
+    }
+    public static String openWindow(Context c,String component,int[] bounds) {
+        IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.openWindow(component,bounds,android.os.Process.myUid()/100000);}catch(Exception e){return "DENIED";}
+    }
+    public static String minimizeWindow(Context c,String pkg) {
+        IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.minimizeWindow(pkg,android.os.Process.myUid()/100000);}catch(Exception e){return "DENIED";}
+    }
+    public static String windowState(Context c,String pkg) {
+        IShellService s=bind(c.getApplicationContext());try{return s==null?"UNKNOWN":s.windowState(pkg,android.os.Process.myUid()/100000);}catch(Exception e){return "UNKNOWN";}
+    }
+    public static void endWindows() {IShellService s=service;try{if(s!=null)s.endWindows();}catch(Exception ignored){}}
+
     public static void runAsync(Context c, String command, Consumer<String> done) {
         BG.execute(() -> {
             String r = run(c, command);

@@ -51,8 +51,8 @@ public static class ScrcpyArgs
         }
         else
         {
-            a.Add("--video-buffer=" + (d.Transport == Transport.Wifi ? 60 : 30));
-            a.Add("--audio-buffer=" + (d.Transport == Transport.Wifi ? 100 : 70));
+            a.Add("--video-buffer=" + (d.Transport is Transport.Wifi or Transport.Network ? 60 : 30));
+            a.Add("--audio-buffer=" + (d.Transport is Transport.Wifi or Transport.Network ? 100 : 70));
         }
 
         switch (p.Audio)
@@ -77,7 +77,7 @@ public static class ScrcpyArgs
         if (p.StayAwake)
         {
             a.Add("--stay-awake"); // работает при подключении по кабелю
-            if (d.Transport == Transport.Wifi)
+            if (d.IsNetwork)
                 a.Add("--screen-off-timeout=" + (24 * 3600).ToString(CultureInfo.InvariantCulture));
         }
         if (p.Borderless) a.Add("--window-borderless");

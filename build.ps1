@@ -1,13 +1,22 @@
 ﻿# Сборка XPhone в папку dist\XPhone (XPhone.exe + tools\ + licenses\ + branding\).
 # Запуск: powershell -ExecutionPolicy Bypass -File build.ps1
+param([switch]$SelfContained)
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $out = Join-Path $root 'dist\XPhone'
 
 $running = Get-Process XPhone, scrcpy, xphone-screen, adb -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($out, 'OrdinalIgnoreCase') }
 if ($running) { throw 'XPhone (или его scrcpy/adb) запущен из папки dist — закройте XPhone, выполните «tools\adb.exe kill-server» и повторите сборку.' }
-if (Test-Path $out) { Remove-Item $out -Recurse -Force }
-dotnet publish (Join-Path $root 'src\XPhone\XPhone.csproj') -c Release -r win-x64 --self-contained false `
+$expectedOut = [IO.Path]::GetFullPath((Join-Path $root 'dist\XPhone'))
+if ([IO.Path]::GetFullPath($out) -ne $expectedOut) { throw 'Неверная папка сборки' }
+foreach ($checkedPath in @($root, (Join-Path $root 'dist'), $out)) {
+    if ((Test-Path -LiteralPath $checkedPath) -and ((Get-Item -LiteralPath $checkedPath).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'Папка сборки не должна быть ссылкой'
+    }
+}
+if (Test-Path -LiteralPath $out) { Remove-Item -LiteralPath $out -Recurse -Force }
+$standalone = $SelfContained.IsPresent.ToString().ToLowerInvariant()
+dotnet publish (Join-Path $root 'src\XPhone\XPhone.csproj') -c Release -r win-x64 --self-contained $standalone `
     -p:PublishSingleFile=true -p:DebugType=none -o $out -nologo
 if ($LASTEXITCODE -ne 0) { throw 'Сборка не удалась' }
 

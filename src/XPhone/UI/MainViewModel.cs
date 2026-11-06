@@ -18,7 +18,7 @@ public sealed class DeviceItem
     public required bool IsRemembered { get; init; }
     public string Serial => Device.Serial;
     public string Title => Device.DisplayName;
-    public string Icon => Device.Transport == Transport.Usb ? "usb" : "wifi";
+    public string Icon => Device.Transport == Transport.Usb ? "usb" : Device.Transport == Transport.Wifi ? "wifi" : "cable";
     public bool IsReady => Device.IsReady;
     public string Subtitle
     {
@@ -26,7 +26,7 @@ public sealed class DeviceItem
         {
             if (!Device.IsReady) return $"{Device.TransportText} · {Device.StateText}";
             var model = Device.Model.Length > 0 && Device.Model != Device.DisplayName ? " · " + Device.Model : "";
-            var ip = Device.Transport == Transport.Wifi && Device.IpAddress != null ? " · " + Device.IpAddress : "";
+            var ip = Device.IsNetwork && Device.IpAddress != null ? " · " + Device.IpAddress : "";
             return Device.TransportText + model + ip;
         }
     }
@@ -57,8 +57,10 @@ public sealed class MainViewModel : Observable, IDisposable
     {
         _ui = Application.Current.Dispatcher;
         Settings = SettingsStore.Load();
+        Settings.NetworkAddresses ??= new();
         Adb = AdbClient.FromAppFolder();
         Watcher = new DeviceWatcher(Adb) { NeedWifiScan = NeedWifiScan };
+        Watcher.SetNetworkTargets(Settings.NetworkAddresses);
         Watcher.Changed += list => _ui.BeginInvoke(() => OnDevices(list));
         Watcher.Problem += msg => _ui.BeginInvoke(() =>
             ShowBanner(new HumanMessage(msg, "Перезапустите XPhone. Если не помогает — переустановите программу: не хватает файлов в папке tools."), null));
@@ -116,7 +118,7 @@ public sealed class MainViewModel : Observable, IDisposable
     private bool NeedWifiScan()
     {
         // Ищем по сети, только если нет ни одного готового телефона по Wi-Fi.
-        return !Watcher.Current.Any(d => d.IsReady && d.Transport == Transport.Wifi);
+        return !Watcher.Current.Any(d => d.IsReady && d.IsNetwork);
     }
 
     // ── Список телефонов ────────────────────────────────────────────────
@@ -276,7 +278,7 @@ public sealed class MainViewModel : Observable, IDisposable
         StartSession(item.Device, null);
     }
 
-    private void StartSession(PhoneDevice device, Core.Win32.RECT? placeAt)
+    private async void StartSession(PhoneDevice device, Core.Win32.RECT? placeAt)
     {
         var profile = Settings.ProfileFor(device.HardwareSerial);
         var s = new ScrcpySession(Adb, device, ScrcpyArgs.Build(device, profile));
@@ -298,6 +300,14 @@ public sealed class MainViewModel : Observable, IDisposable
         Watcher.Paused = true;
         if (placeAt == null) HideBanner();
         State = ConnState.Connecting;
+        var privacyReady = await Link.PreparePrivacyAsync(device.Key);
+        if (Session != s || s.StopRequested) return;
+        if (!privacyReady) {
+            Session = null; State = ConnState.Idle; Watcher.Paused = false;
+            ShowBanner(new HumanMessage("Защита уведомлений не подтверждена",
+                "Проверьте Shizuku и настройки защиты в XPhone на телефоне, затем повторите подключение."), "Телефон не подтвердил подготовку уведомлений перед захватом экрана.");
+            return;
+        }
         try { s.Start(placeAt); }
         catch (Exception ex)
         {
@@ -533,10 +543,10 @@ public sealed class MainViewModel : Observable, IDisposable
     private string _speedProgress = "";
     private string? _speedError;
 
-    public bool ShowWifiTest => Selected is { IsReady: true } s && s.Device.Transport == Transport.Wifi;
+    public bool ShowWifiTest => Selected is { IsReady: true } s && s.Device.IsNetwork;
     public bool SpeedBusy { get => _speedBusy; private set { Set(ref _speedBusy, value); RaiseSpeed(); } }
     public bool CanRunSpeed => ShowWifiTest && !SpeedBusy && Session == null;
-    public string SpeedButtonText => SpeedBusy ? _speedProgress : (SpeedResult != null ? "Проверить ещё раз" : "Проверить Wi-Fi");
+    public string SpeedButtonText => SpeedBusy ? _speedProgress : (SpeedResult != null ? "Проверить ещё раз" : "Проверить сеть");
     private WifiSpeedResult? SpeedResult => Selected != null && _speedResults.TryGetValue(Selected.Serial, out var r) ? r : null;
     public bool HasSpeedText => SpeedText.Length > 0;
     public bool CanApplySpeed => SpeedResult is { } r && r.RecommendedMbps != Profile.BitrateMbps;
@@ -551,7 +561,7 @@ public sealed class MainViewModel : Observable, IDisposable
             if (SpeedResult is not { } r)
                 return Session != null
                     ? "Проверка скорости — когда трансляция выключена (иначе она мешает измерению)."
-                    : "Узнайте, какой битрейт выдержит ваш Wi-Fi и можно ли включать «Минимальную задержку». Займёт ~15 секунд.";
+                    : "Узнайте, какой битрейт выдержит ваша сеть и можно ли включать «Минимальную задержку». Займёт ~15 секунд.";
             var lat = r.LowLatencyLevel switch
             {
                 0 => "можно включать.",
@@ -568,6 +578,7 @@ public sealed class MainViewModel : Observable, IDisposable
                 $"Скорость: {r.Mbps:0} Мбит/с · задержка {r.PingMs:0} мс (разброс {r.JitterMs:0} мс{loss}).",
             };
             var links = new List<string>();
+            if (Selected?.Device.Transport == Transport.Lan) links.Add("телефон — LAN (Ethernet)");
             if (r.Phone is { } w) links.Add($"телефон — Wi-Fi {w.Band}, сигнал {w.SignalText}" + (w.Rssi != 0 ? $" ({w.Rssi} дБм)" : ""));
             if (r.PcLinkMbps > 0) links.Add($"компьютер — {(r.PcOnWifi ? "Wi-Fi" : "кабель")} {FormatLink(r.PcLinkMbps)}");
             if (links.Count > 0) lines.Add("Связь: " + string.Join(", ", links) + ".");
@@ -709,6 +720,20 @@ public sealed class MainViewModel : Observable, IDisposable
     public string RememberedText => Settings.RememberPhone && Settings.RememberedPhoneName != null
         ? "Запомнен: " + Settings.RememberedPhoneName
         : "Телефон запомнится после первого подключения";
+
+    public void RememberNetworkAddress(string address)
+    {
+        if (!NetworkEndpoint.TryParse(address, out var endpoint)) return;
+        Settings.NetworkAddresses.Remove(endpoint.Address);
+        Settings.NetworkAddresses.Insert(0, endpoint.Address);
+        Settings.NetworkAddresses = Settings.NetworkAddresses.Take(8).ToList();
+        Watcher.SetNetworkTargets(Settings.NetworkAddresses); SaveSoon();
+    }
+    public void ForgetNetworkAddress(string address)
+    {
+        Settings.NetworkAddresses.Remove(address);
+        Watcher.SetNetworkTargets(Settings.NetworkAddresses); SaveSoon();
+    }
 
     public void SaveSoon()
     {

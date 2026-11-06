@@ -45,6 +45,7 @@ public final class PcLink {
     public static boolean waiting() { return state == State.NO_PC && System.currentTimeMillis() < pendingStartUntil; }
 
     private static void changed() {
+        if(app!=null)Shell.onMain(()->StreamPrivacy.tick(app));
         Shell.onMain(() -> { for (Listener l : LISTENERS) l.changed(); });
     }
 
@@ -71,12 +72,13 @@ public final class PcLink {
                 s.setTcpNoDelay(true);
                 Writer w = new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8);
                 out = w;
-                send("HELLO " + Build.MODEL);
+                send("HELLO " + Build.MODEL+" XPHONE2");
                 state = State.IDLE;
                 changed();
                 if (System.currentTimeMillis() < pendingStartUntil) {
                     pendingStartUntil = 0;
-                    send("START");
+                    if(!Prefs.get(app,"stream_privacy",true)||!Prefs.get(app,"privacy_available",false)||"PROTECTED".equals(Shell.streamPrivacy(app,true)))send("START");
+                    else{message="Не удалось скрыть уведомления — запуск отменён";changed();}
                 }
                 BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
                 String line;
@@ -98,6 +100,17 @@ public final class PcLink {
     }
 
     private static void handle(String line) {
+        if(line.startsWith("PREPARE_PRIVACY ")){
+            String id=line.substring(16).trim();if(!id.matches("[a-f0-9]{32}"))return;
+            Shell.background(()->{
+                String status="disabled";
+                if(Prefs.get(app,"stream_privacy",true)&&Prefs.get(app,"privacy_available",false)){
+                    status=Shell.ready(app)&&"PROTECTED".equals(Shell.streamPrivacy(app,true))?"protected":"denied";
+                }
+                send("PRIVACY "+id+" "+status);
+            });return;
+        }
+
         if (line.startsWith("PC ")) {
             pcName = line.substring(3);
             Prefs.put(app, "pc_ever_connected", true);
@@ -130,7 +143,13 @@ public final class PcLink {
     public static void requestStart(Context c) {
         message = null;
         if (state != State.NO_PC) {
-            Shell.background(() -> send("START"));
+            Shell.background(() -> {
+                if(Prefs.get(c,"stream_privacy",true)&&Prefs.get(c,"privacy_available",false)){
+                    String protection=Shell.streamPrivacy(c,true);
+                    if(!"PROTECTED".equals(protection)){state=State.IDLE;message="Не удалось скрыть уведомления. Проверьте Shizuku или выключите защиту в настройках.";changed();return;}
+                }
+                send("START");
+            });
             state = State.CONNECTING;
             changed();
             return;
@@ -153,6 +172,10 @@ public final class PcLink {
 
     /** Включить «Отладку по Wi-Fi» и не давать телефону «забывать» компьютер через неделю. */
     public static void enableWifiDebugging(Context c) {
+        if (!PhoneNetwork.lanAddresses().isEmpty() && state == State.NO_PC) {
+            message="LAN обнаружен. Если ПК не находится: откройте на нём «Сеть / LAN» и введите LAN-адрес. Для некоторых прошивок нужна предварительная подготовка через USB.";
+            changed();
+        }
         if (!canEnableWifiDebugging(c)) return;
         Shell.background(() -> {
             Booster.putGlobal(c, "adb_allowed_connection_time", "0");

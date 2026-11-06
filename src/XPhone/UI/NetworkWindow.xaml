@@ -1,0 +1,34 @@
+<Window x:Class="XPhone.UI.NetworkWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Сеть / LAN" Width="550" SizeToContent="Height" MaxHeight="850" ResizeMode="NoResize"
+        Style="{StaticResource Window}" Background="{StaticResource Dialog}" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="22">
+        <TextBlock Text="Подключение по локальной сети" Style="{StaticResource H2}" />
+        <TextBlock Text="Телефон — через Ethernet-переходник или Wi-Fi, компьютер — в той же локальной сети. Интернет для самой трансляции не нужен." Style="{StaticResource Note}" Margin="0,8,0,18" />
+        <TextBlock Text="Адрес телефона" FontWeight="SemiBold" Margin="0,0,0,7" />
+        <TextBox x:Name="AddressBox" ToolTip="IPv4 и порт, например 192.168.0.6:5555" />
+        <TextBlock Text="IP:порт из телефона. Если порт не указан, используется 5555 — режим, подготовленный через USB." Style="{StaticResource Note}" Margin="0,6,0,10" />
+        <Button x:Name="ConnectButton" Content="Подключиться и запомнить адрес" Style="{StaticResource BtnPrimary}" Click="Connect_Click" IsDefault="True" />
+        <TextBlock Text="Запомненные адреса" Margin="0,16,0,6" />
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ComboBox x:Name="SavedAddresses" SelectionChanged="Saved_Changed" />
+            <Button Grid.Column="1" Content="Забыть" Style="{StaticResource BtnSm}" Margin="8,0,0,0" Click="Forget_Click" />
+        </Grid>
+        <Border Style="{StaticResource CardBox}" Margin="0,18,0,0">
+            <StackPanel>
+                <TextBlock Text="Если отладка не работает без Wi-Fi" FontWeight="SemiBold" />
+                <TextBlock Text="1. Подключите телефон к ПК обычным USB-кабелем.&#10;2. Нажмите «Подготовить LAN через USB».&#10;3. Замените USB-кабель Ethernet-переходником.&#10;4. На телефоне XPhone → «Стрим» найдите LAN-адрес и введите его выше." Style="{StaticResource Note}" Margin="0,8,0,12" />
+                <TextBlock x:Name="UsbText" Style="{StaticResource Note}" Margin="0,0,0,10" />
+                <Button x:Name="PrepareButton" Content="Подготовить LAN через USB" Style="{StaticResource Btn}" Click="Prepare_Click" />
+                <TextBlock Text="TCP/IP-отладка открывает порт 5555 без TLS и перезапускает службу связи. Используйте доверенную локальную сеть. После перезагрузки телефона подготовка может понадобиться снова." Style="{StaticResource Note}" Margin="0,9,0,10" />
+                <Button x:Name="DisableButton" Content="Выключить режим TCP/IP" Style="{StaticResource BtnSm}" Click="Disable_Click" />
+            </StackPanel>
+        </Border>
+        <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,14,0,0" />
+        <Button Content="Закрыть" Style="{StaticResource Btn}" HorizontalAlignment="Right" Margin="0,16,0,0" Click="Close_Click" IsCancel="True" />
+    </StackPanel>
+    </ScrollViewer>
+</Window>

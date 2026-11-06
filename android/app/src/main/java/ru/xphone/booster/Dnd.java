@@ -16,11 +16,12 @@ public final class Dnd {
     private Dnd() {}
 
     /** До конца игры (выключится при выходе из игры вместе с остальными настройками). */
-    public static final int UNTIL_GAME_END = -1;
+    public static final int UNTIL_GAME_END = -1, INDEFINITE = -2;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static long until;          // время окончания; -1 — до конца игры; 0 — без таймера
     private static Runnable pending;
+    private static volatile int revision;
 
     public static boolean timed() { return until != 0; }
 
@@ -34,25 +35,31 @@ public final class Dnd {
     /** Включить на minutes минут (или UNTIL_GAME_END). */
     public static void start(Context c, int minutes, Runnable changed) {
         cancelTimer();
-        until = minutes == UNTIL_GAME_END ? UNTIL_GAME_END : System.currentTimeMillis() + minutes * 60_000L;
+        until = minutes == INDEFINITE ? 0 : minutes == UNTIL_GAME_END ? UNTIL_GAME_END : System.currentTimeMillis() + minutes * 60_000L;
+        final int token=revision;
         Shell.background(() -> {
+            if(token!=revision)return;
             Booster.set(c, Booster.DND, true, null);
+            final boolean accepted=Booster.read(c,Booster.DND,null);
             Shell.onMain(() -> {
-                BoostService.toast("Не беспокоить включено · " + untilText(), R.drawable.ic_bell_off);
+                if(token!=revision)return;
+                if(!accepted){cancelTimer();until=0;BoostService.toast("Телефон не дал включить «Не беспокоить»",R.drawable.ic_alert);}
+                else BoostService.toast("Не беспокоить включено · " + (minutes==INDEFINITE?"без таймера":untilText()), R.drawable.ic_bell_off);
                 if (changed != null) changed.run();
             });
-            // Проверка: на Samsung с Galaxy Watch служба часов выключает режим через секунду
-            // (синхронизирует «Не беспокоить» со своим). Не делаем вид, что режим работает.
-            try { Thread.sleep(2500); } catch (InterruptedException ignored) { }
-            if (until != 0 && !Booster.read(c, Booster.DND, null)) {
-                Shell.onMain(() -> {
-                    cancelTimer();
-                    until = 0;
-                    BoostService.toast("«Не беспокоить» выключил телефон — см. подсказку в XPhone", R.drawable.ic_alert);
-                    Prefs.put(c, "dnd_reverted", true);
-                    if (changed != null) changed.run();
+            // Delayed recheck must not block the shared command queue or panel opening.
+            if(accepted)MAIN.postDelayed(()->{
+                if(token!=revision)return;
+                Shell.background(()->{
+                    if(token!=revision||Booster.read(c,Booster.DND,null))return;
+                    Shell.onMain(()->{
+                        if(token!=revision)return;cancelTimer();until=0;
+                        BoostService.toast("«Не беспокоить» выключил телефон — см. подсказку в XPhone",R.drawable.ic_alert);
+                        Prefs.put(c,"dnd_reverted",true);if(changed!=null)changed.run();
+                    });
                 });
-            }
+            },2500);
+
         });
         if (minutes > 0) {
             pending = () -> stop(c, null);
@@ -79,6 +86,7 @@ public final class Dnd {
     }
 
     private static void cancelTimer() {
+        revision++;
         if (pending != null) MAIN.removeCallbacks(pending);
         pending = null;
     }

@@ -23,6 +23,8 @@ public sealed class PhoneLink : IDisposable
         public readonly HashSet<string> ReversedSerials = new();
         public readonly List<StreamWriter> Clients = new();
         public CancellationTokenSource Cts = new();
+        public bool PrivacyProtocol;
+        public readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> PrivacyRequests = new();
     }
 
     private readonly AdbClient _adb;
@@ -103,12 +105,33 @@ public sealed class PhoneLink : IDisposable
                 var line = await reader.ReadLineAsync(ct);
                 if (line == null) break;
                 line = line.Trim();
-                if (line.Length == 0 || line.StartsWith("HELLO", StringComparison.Ordinal) || line == "PING") continue;
+                if (line.StartsWith("HELLO", StringComparison.Ordinal)) { ep.PrivacyProtocol = line.EndsWith(" XPHONE2", StringComparison.Ordinal); continue; }
+                if (line.StartsWith("PRIVACY ", StringComparison.Ordinal)) {
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 3 && ep.PrivacyRequests.TryRemove(parts[1], out var waiting))
+                        waiting.TrySetResult(parts[2] is "protected" or "disabled");
+                    continue;
+                }
+                if (line.Length == 0 || line == "PING") continue;
                 Command?.Invoke(key, line);
             }
         }
         catch { }
         finally { lock (ep.Clients) ep.Clients.Remove(writer); }
+    }
+
+    /// <summary>New APKs acknowledge notification protection before capture starts.</summary>
+    public async Task<bool> PreparePrivacyAsync(string key)
+    {
+        if (!_endpoints.TryGetValue(key, out var ep) || !ep.PrivacyProtocol) return true;
+        var id = Guid.NewGuid().ToString("N");
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ep.PrivacyRequests[id] = completion;
+        try {
+            Send(key, "PREPARE_PRIVACY " + id);
+            return await completion.Task.WaitAsync(TimeSpan.FromSeconds(8));
+        } catch { return false; }
+        finally { ep.PrivacyRequests.TryRemove(id, out _); }
     }
 
     /// <summary>Сообщить телефону (всем его подключениям).</summary>

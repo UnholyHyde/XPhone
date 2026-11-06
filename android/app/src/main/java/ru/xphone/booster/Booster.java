@@ -53,7 +53,7 @@ public final class Booster {
     /** Короткое название для плитки (длинные слова не помещаются). */
     public static String shortTitle(String id) {
         switch (id) {
-            case PERF: return "Турбо";
+            case PERF: return "Режим";
             case BRIGHT: return "Яркость";
             case CLEAN: return "Очистка";
             default: return title(id);
@@ -84,7 +84,7 @@ public final class Booster {
     public static String hint(String id) {
         switch (id) {
             case DND: return "Уведомления молчат, звук игры остаётся";
-            case PERF: return "Игровой режим «Производительность» для этой игры";
+            case PERF: return "Экономия, баланс и производительность — только поддерживаемые телефоном режимы";
             case PASS: return "На зарядке 25 Вт+ телефон питается от неё, батарея не греется";
             case ANIM: return "Интерфейс отзывчивее";
             case BRIGHT: return "Автояркость не дёргает экран во время игры";
@@ -134,7 +134,7 @@ public final class Booster {
     /** Есть ли функция на этом телефоне вообще. */
     public static boolean supported(String id) {
         if (PASS.equals(id)) return isSamsung();
-        if (PERF.equals(id)) return Build.VERSION.SDK_INT >= 33;
+        if (PERF.equals(id)) return true; // System power saver exists on older Android too.
         return true;
     }
 
@@ -144,6 +144,7 @@ public final class Booster {
         if (DND.equals(id)) return Shell.ready(c) || dndAccess(c);
         if (RES.equals(id) || STREAM.equals(id)) return true;
         if (ANIM.equals(id)) return Shell.ready(c) || canWriteSecure(c);
+        if (PERF.equals(id)) return GamePower.available(c);
         return Shell.ready(c);
     }
 
@@ -176,14 +177,13 @@ public final class Booster {
     // ── Включение / выключение ─────────────────────────────────────────
 
     public static void set(Context c, String id, boolean on, String pkg) {
+        if (PERF.equals(id)) { GamePower.select(c,pkg,on?GamePower.PERFORMANCE:GamePower.BALANCE); return; }
         remember(c, id, pkg);
         switch (id) {
             case DND:
                 setDnd(c, on ? 1 : 0);
                 break;
-            case PERF:
-                if (pkg != null) sh(c, "cmd game mode " + (on ? "performance" : "standard") + " " + pkg);
-                break;
+
             case PASS:
                 sh(c, "settings put system pass_through " + (on ? 1 : 0));
                 break;
@@ -191,14 +191,23 @@ public final class Booster {
                 for (String k : ANIM_KEYS) putGlobal(c, k, on ? "0" : "1.0");
                 break;
             case BRIGHT:
+                String brightness=on?sh(c,"cmd display get-brightness"):null;
                 sh(c, "settings put system screen_brightness_mode " + (on ? 0 : 1));
+                if(on)try{float value=Float.parseFloat(brightness.trim());if(value>=0&&value<=1)sh(c,"cmd display set-brightness "+Float.toString(value));}catch(Exception ignored){}
                 break;
         }
     }
 
+    public static boolean setBrightness(Context c,int percent) {
+        if(!Shell.ready(c))return false;remember(c,BRIGHT,null);
+        float value=Math.max(0,Math.min(100,percent))/100f;
+        sh(c,"settings put system screen_brightness_mode 0");sh(c,"cmd display set-brightness "+Float.toString(value));
+        try{float actual=Float.parseFloat(sh(c,"cmd display get-brightness").trim());return Math.abs(actual-value)<.03f;}catch(Exception e){return false;}
+    }
+
     /** Закрыть фоновые приложения. */
-    public static void clean(Context c) {
-        sh(c, "am kill-all");
+    public static String clean(Context c,String gamePkg) {
+        return MemoryCleaner.clean(c,gamePkg);
     }
 
     /** zen: 0 — выкл, 1 — только важные, 2 — полная тишина, 3 — только будильники. */
@@ -222,7 +231,7 @@ public final class Booster {
     }
 
     public static boolean hasChanges(Context c) {
-        return !orig(c).getAll().isEmpty();
+        return !orig(c).getAll().isEmpty() || GamePower.hasChanges(c) || DisplayResolution.hasChanges(c);
     }
 
     private static void remember(Context c, String id, String pkg) {
@@ -258,6 +267,8 @@ public final class Booster {
                 v = sb.toString();
                 break;
             case BRIGHT:
+                String level=sh(c,"cmd display get-brightness");
+                try{float f=Float.parseFloat(level.trim());if(f>=0&&f<=1)o.edit().putString("bright_level",Float.toString(f)).commit();}catch(Exception ignored){}
                 v = String.valueOf(Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, 1));
                 break;
         }
@@ -267,6 +278,11 @@ public final class Booster {
     /** Вернуть всё, что меняли, как было до игры. */
     public static void restoreAll(Context c) {
         SharedPreferences o = orig(c);
+        java.util.Map<String,String> deferred=new java.util.HashMap<>();
+        if(o.contains("bright_level"))try{
+            float level=Float.parseFloat(o.getString("bright_level","-1"));
+            if(level>=0&&level<=1)sh(c,"cmd display set-brightness "+Float.toString(level));
+        }catch(Exception ignored){}
         for (String id : o.getAll().keySet()) {
             String v = o.getString(id, null);
             if (v == null) continue;
@@ -277,7 +293,7 @@ public final class Booster {
                         break;
                     case PERF:
                         String[] parts = v.split("\\|");
-                        if (parts.length == 2) sh(c, "cmd game mode " + parts[0] + " " + parts[1]);
+                        if (parts.length == 2&&!GamePower.restoreGameMode(c,parts[1],parts[0]))deferred.put(id,v);
                         break;
                     case PASS:
                         sh(c, "settings put system pass_through " + v);
@@ -286,13 +302,15 @@ public final class Booster {
                         String[] vals = v.split("\\|");
                         for (int i = 0; i < ANIM_KEYS.length && i < vals.length; i++) putGlobal(c, ANIM_KEYS[i], vals[i]);
                         break;
+                    case "bright_level": break; // restored before the original auto/manual mode
                     case BRIGHT:
                         sh(c, "settings put system screen_brightness_mode " + v);
                         break;
                 }
             } catch (Exception ignored) { }
         }
-        o.edit().clear().commit();
+        SharedPreferences.Editor restored=o.edit().clear();for(java.util.Map.Entry<String,String> entry:deferred.entrySet())restored.putString(entry.getKey(),entry.getValue());restored.commit();
+        GamePower.restoreAll(c);DisplayResolution.restore(c);
     }
 
     // ── Нагрев и батарея ───────────────────────────────────────────────

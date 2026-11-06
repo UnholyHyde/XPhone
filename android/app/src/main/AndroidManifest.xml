@@ -8,6 +8,7 @@
         tools:ignore="ProtectedPermissions" />
     <!-- Связь с XPhone на ПК (через adb, только 127.0.0.1) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Панель поверх игры -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Узнать, какая игра сейчас открыта -->
@@ -24,6 +25,7 @@
     <!-- Список установленных приложений (для выбора игр) -->
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="com.samsung.android.app.smartcapture" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

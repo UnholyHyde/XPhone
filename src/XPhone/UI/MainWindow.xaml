@@ -46,6 +46,8 @@
                     </StackPanel>
                 </Border>
 
+                <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Support_Click" Margin="8,0,0,0"
+                        Content="Поддержка" ToolTip="Поддержать разработку, Telegram и GitHub Issues" />
                 <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Check_Click" AutomationProperties.Name="Проверка телефона"
                         ToolTip="Проверить, что на телефоне всё включено">
                     <StackPanel Orientation="Horizontal">
@@ -88,7 +90,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Button Style="{StaticResource BtnSm}" Click="Refresh_Click" AutomationProperties.Name="Обновить" IsEnabled="{Binding IsRefreshing, Converter={StaticResource Eq}, ConverterParameter=False}"
-                                    ToolTip="Найти телефоны заново (USB и Wi-Fi)">
+                                    ToolTip="Найти телефоны заново (USB, Wi-Fi и LAN)">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Icon Kind="refresh-cw" Size="15" Margin="0,0,7,0" />
                                     <TextBlock Text="Обновить" />
@@ -102,6 +104,8 @@
                                 </StackPanel>
                             </Button>
                         </Grid>
+
+                        <Button Content="Сеть / LAN — подключить по адресу" Style="{StaticResource BtnSm}" Click="Network_Click" Margin="0,-4,0,12" AutomationProperties.Name="Сеть / LAN" />
 
                         <!-- Подключить / Отключить -->
                         <Grid>
@@ -308,7 +312,7 @@
                         <StackPanel>
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource BtnSm}" Click="SpeedTest_Click" IsEnabled="{Binding CanRunSpeed}"
-                                        AutomationProperties.Name="Проверить Wi-Fi" MinWidth="150">
+                                        AutomationProperties.Name="Проверить сеть" MinWidth="150">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:Icon Kind="zap" Size="14" Margin="0,0,6,0" />
                                         <TextBlock Text="{Binding SpeedButtonText}" />
@@ -316,7 +320,7 @@
                                 </Button>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <ui:Icon Kind="wifi" Size="16" Margin="0,0,8,0" Foreground="{StaticResource Silver}" />
-                                    <TextBlock Text="Скорость Wi-Fi" FontWeight="SemiBold" FontSize="13" />
+                                    <TextBlock Text="Скорость сети" FontWeight="SemiBold" FontSize="13" />
                                 </StackPanel>
                             </DockPanel>
                             <TextBlock Text="{Binding SpeedText}" Style="{StaticResource Note}" Foreground="#B4B7C0" Margin="0,8,0,0"

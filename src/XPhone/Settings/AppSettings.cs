@@ -36,6 +36,7 @@ public sealed class PhoneProfile
 public sealed class AppSettings
 {
     public int Version { get; set; } = 1;
+    public List<string> NetworkAddresses { get; set; } = new();
     public bool FirstRunDone { get; set; }
     public bool RememberPhone { get; set; } = true;
     public bool AutoConnect { get; set; }

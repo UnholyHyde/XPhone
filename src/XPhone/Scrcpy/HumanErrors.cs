@@ -14,7 +14,7 @@ public static class HumanErrors
     /// <summary>scrcpy закрылся сам. Почему?</summary>
     public static HumanMessage ForExit(string log, PhoneDevice device, bool windowWasShown)
     {
-        bool wifi = device.Transport == Transport.Wifi;
+        bool wifi = device.IsNetwork;
 
         if (Has(log, "unauthorized"))
             return new("Телефон не разрешил подключение",
@@ -24,10 +24,10 @@ public static class HumanErrors
         if (Has(log, "Device disconnected", "Closing after device disconnection", "device offline",
                 "stream disabled due to connection error", "Connection reset", "Broken pipe") || (windowWasShown && Has(log, "Demuxer error", "end of frames")))
             return wifi && Core.NetCheck.VpnOnRouteTo(device.IpAddress) is { } vpn
-                ? new("Связь по Wi-Fi потерялась: мешает VPN", Core.NetCheck.VpnHint(vpn))
+                ? new("Связь по сети потерялась: мешает VPN", Core.NetCheck.VpnHint(vpn))
                 : wifi
-                ? new("Связь с телефоном по Wi-Fi потерялась",
-                    "Проверьте, что телефон и компьютер в одной сети Wi-Fi и на телефоне включена «Отладка по Wi-Fi». " +
+                ? new("Связь с телефоном по сети потерялась",
+                    "Проверьте, что телефон и компьютер в одной локальной сети и на телефоне включена «Отладка по Wi-Fi». " +
                     "Телефон переподключится сам, когда снова появится в сети (если включено «Подключаться автоматически»).")
                 : new("Кабель отключён или телефон перестал отвечать",
                     "Проверьте кабель и разъём. Если кабель на месте — выньте и вставьте его снова. " +
@@ -36,7 +36,7 @@ public static class HumanErrors
         if (Has(log, "Could not find ADB device", "Could not find any ADB device", "device not found", "device '"))
             return wifi
                 ? new("Телефон пропал из сети",
-                    "Включите на телефоне «Отладку по Wi-Fi» и проверьте, что он в той же сети, что и компьютер. Затем нажмите «Обновить».")
+                    "Для Wi-Fi включите отладку; для LAN проверьте TCP/IP и сетевой адрес. Проверьте, что он в той же сети, что и компьютер. Затем нажмите «Обновить».")
                 : new("Телефон не найден",
                     "Подключите телефон кабелем и нажмите «Обновить». Если не помогает — откройте «Проверку телефона».");
 

@@ -10,10 +10,34 @@ import java.util.concurrent.TimeUnit;
  */
 public class ShellService extends IShellService.Stub {
 
+    @Override public String restartApp(String component,int user){return GameRestarter.restart(component,user);}
+    private final StreamPrivacyBridge privacy=new StreamPrivacyBridge();
+    private int privacyUser;
+    @Override public boolean privacyAvailable(){return privacy.available();}
+    @Override public String streamPrivacy(boolean active,int user){privacyUser=user;return privacy.set(active,user);}
+    private final ScreenRecording recording=new ScreenRecording();
+    @Override public String startRecord(String name,int mbps){return recording.start(name,mbps);}
+    @Override public String stopRecord(){return recording.stop();}
+    @Override public String recordState(){return recording.state();}
+
+    private final WindowTaskBridge windows = new WindowTaskBridge();
+    @Override public String resumeGame(String component,int user){return windows.resumeGame(component,user);}
+    @Override public boolean windowAvailable(){return windows.available();}
+    @Override public String openWindow(String c,int[] b,int u){return windows.open(c,b,u);}
+    @Override public String minimizeWindow(String p,int u){return windows.minimize(p,u);}
+    @Override public String windowState(String p,int u){return windows.state(p,u);}
+    @Override public void endWindows(){windows.end();}
+
+    private final TouchInputReader touches = new TouchInputReader();
     public ShellService() {}
+    @Override public boolean touchAvailable() { return TouchInputReader.findDevice() != null; }
+    @Override public boolean startTouch(ITouchListener listener) { return touches.start(listener); }
+    @Override public void stopTouch() { touches.stop(); }
 
     @Override
     public void destroy() {
+        privacy.set(false,privacyUser);touches.stop();recording.stop();
+        windows.end();
         System.exit(0);
     }
 
