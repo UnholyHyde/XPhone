@@ -6,7 +6,7 @@
 
 **Игровой хаб для Android. Свои профили, панель в игре и показатели экрана.**
 
-[Скачать APK 1.17.6](https://github.com/UnholyHyde/XPhone/releases/download/v1.17.6/XPhone-Android-1.17.6.apk) · [Windows 1.4.2](https://github.com/UnholyHyde/XPhone/releases/download/v1.17.6/XPhone-Setup-1.4.2-x64.exe) · [Telegram](https://t.me/FCKNHYDE) · [Обратная связь](https://github.com/UnholyHyde/XPhone/issues) · [Поддержать разработчика](https://donatepay.ru/don/unholyhyde)
+[Скачать APK 1.17.12](https://github.com/UnholyHyde/XPhone/releases/download/v1.17.12/XPhone-Android-1.17.12.apk) · [Windows 1.4.2](https://github.com/UnholyHyde/XPhone/releases/download/v1.17.6/XPhone-Setup-1.4.2-x64.exe) · [Telegram](https://t.me/FCKNHYDE) · [Обратная связь](https://github.com/UnholyHyde/XPhone/issues) · [Поддержать разработчика](https://donatepay.ru/don/unholyhyde)
 
 Android — основное приложение · Windows — по желанию · USB / Wi-Fi / локальная сеть
 
@@ -38,7 +38,7 @@ Android — основное приложение · Windows — по желан
 
 **Передача экрана на ПК — дополнительная возможность.** Если нужен стрим или OBS, Windows-приложение поможет подключить телефон и открыть его экран со звуком. Если стрим не нужен, ПК-часть устанавливать не требуется.
 
-> **Статус: тестовая разработка.** Актуальный [релиз](https://github.com/UnholyHyde/XPhone/releases/tag/v1.17.6): Android **1.17.6** и Windows **1.4.2**. APK, установщик EXE, контрольные суммы SHA-256 и соответствующие исходники опубликованы вместе. Архивы `Source code` предназначены для разработчиков и не являются установщиками. Совместимость с другими моделями ещё требует обратной связи тестеров.
+> **Статус — тестовая разработка.** Актуальная версия Android — **[1.17.12](https://github.com/UnholyHyde/XPhone/releases/tag/v1.17.12)**. Последняя опубликованная версия Windows — **[1.4.2](https://github.com/UnholyHyde/XPhone/releases/tag/v1.17.6)**. На страницах релизов доступны установочные файлы, контрольные суммы SHA-256 и соответствующие исходники. Архивы `Source code` предназначены для разработчиков. Совместимость с другими моделями ещё требует обратной связи тестеров.
 
 <a id="audience"></a>
 ## Кому пригодится
