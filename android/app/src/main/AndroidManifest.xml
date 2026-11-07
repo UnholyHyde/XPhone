@@ -8,6 +8,7 @@
         tools:ignore="ProtectedPermissions" />
     <!-- Связь с XPhone на ПК (через adb, только 127.0.0.1) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Панель поверх игры -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -67,6 +68,12 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name=".UpdateApkProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <!-- Shizuku: через него приложение получает права adb -->
         <provider

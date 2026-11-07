@@ -40,11 +40,12 @@ public final class Overlay {
     private View handle, micBubble, toastView, welcomeView;
     private WindowManager.LayoutParams handleLp, micLp;
     private boolean hubSuspended,resumeTouches;
-    private boolean handleDragging;
+    private boolean handleDragging,recoveringHandle;
     private Runnable handleHold;
     private int handleScreenW, handleScreenH;
     private float handleDensity;
     private Runnable displayReflow;
+    private boolean displayReflowPending;
     private View retiredPanel;
     private final FpsHud fpsHud;
     private FrameLayout panelRoot;
@@ -181,7 +182,7 @@ public final class Overlay {
         pill.setBackground(Ui.box(ctx,0xFFFFFFFF,0x66000000,4));
         h.addView(pill,new FrameLayout.LayoutParams(dp(vertical?8:32),dp(vertical?32:8),Gravity.CENTER));
         int[] position=handlePlacement(edge);handleLp=baseLp(position[2],position[3],WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
-        handleLp.alpha=.5f;handleLp.gravity=Gravity.TOP|Gravity.START;handleLp.x=position[0];handleLp.y=position[1];if(Build.VERSION.SDK_INT>=30)handleLp.setFitInsetsTypes(0);
+        handleLp.setTitle("XPhone:handle");handleLp.alpha=.5f;handleLp.gravity=Gravity.TOP|Gravity.START;handleLp.x=position[0];handleLp.y=position[1];if(Build.VERSION.SDK_INT>=30)handleLp.setFitInsetsTypes(0);
         Point size=screen();handleScreenW=size.x;handleScreenH=size.y;handleDensity=ctx.getResources().getDisplayMetrics().density;
         float[] down=new float[4];boolean[] moved={false};long[] downAt={0};HandleDoubleTap taps=new HandleDoubleTap();
         h.setContentDescription("Язычок XPhone. Двойное нажатие открывает панель; удержание позволяет переместить.");
@@ -213,7 +214,7 @@ public final class Overlay {
                     if(handle==h){int[] p=handlePlacement(edge);handleLp.x=p[0];handleLp.y=p[1];try{wm.updateViewLayout(h,handleLp);}catch(Exception ignored){}}return true;
             }return true;
         });
-        handle=h;try{wm.addView(h,handleLp);}catch(Exception e){handle=null;}
+        handle=h;try{wm.addView(h,handleLp);}catch(Exception e){handle=null;android.util.Log.w("XPhone","Handle window could not be attached",e);return;}
         if(extraEnabled("mic"))showMicBubble();syncHud();
     }
     public void setSide(boolean leftSide){setHandleEdge(leftSide?HandleGeometry.LEFT:HandleGeometry.RIGHT);}
@@ -227,6 +228,7 @@ public final class Overlay {
         resumeTouches=false;
         cancelHandleHold();handleDragging=false;
         if(displayReflow!=null){MAIN.removeCallbacks(displayReflow);displayReflow=null;}
+        displayReflowPending=false;
         if(warmMetrics!=null){TelemetryFeed.stop(warmMetrics);warmMetrics=null;}
         sessionExtras.clear();cachedStates.clear();statesAt=0;powerState=null;
         companions.end();
@@ -243,16 +245,34 @@ public final class Overlay {
 
     /** Reflow after rotation; keep the handle within the visible screen. */
     public void ensureHandleVisible() {
-        if(handle==null)return;Point size=screen();
-        if(size.x!=handleScreenW||size.y!=handleScreenH||Math.abs(handleDensity-ctx.getResources().getDisplayMetrics().density)>.01f){requestDisplayReflow();return;}
+        if(!canShow()||gamePkg==null)return;
+        // A reflow or WindowManager failure may have detached the view while the
+        // game itself did not change. Restore it without reapplying game actions.
+        if(handle==null||!handle.isAttachedToWindow()){
+            if(recoveringHandle)return;
+            recoveringHandle=true;
+            try{View old=handle;handle=null;remove(old);showHandle(gamePkg);}
+            finally{recoveringHandle=false;}
+            return;
+        }
+        if(handle.getVisibility()!=View.VISIBLE)handle.setVisibility(View.VISIBLE);
+        Point size=screen();
+        if(displayReflowPending||size.x!=handleScreenW||size.y!=handleScreenH||Math.abs(handleDensity-ctx.getResources().getDisplayMetrics().density)>.01f){requestDisplayReflow();return;}
         if(handleDragging)return;int[] position=handlePlacement(Prefs.handleEdge(ctx));
         if(handleLp.x!=position[0]||handleLp.y!=position[1]){handleLp.x=position[0];handleLp.y=position[1];try{wm.updateViewLayout(handle,handleLp);}catch(Exception ignored){}}
     }
     public void requestDisplayReflow(){
+        displayReflowPending=true;
         if(displayReflow!=null)MAIN.removeCallbacks(displayReflow);
         displayReflow=()->{
             if(DisplayResolution.changing){requestDisplayReflow();return;}
-            displayReflow=null;closeMetricTooltip();Ui.load(ctx);
+            displayReflow=null;
+            // showHandle() deliberately refuses windows while the hub is on
+            // screen. Do not delete the suspended handle and lose its only
+            // reference; resume will reflow it against the new display bounds.
+            if(hubSuspended||!canShow())return;
+            displayReflowPending=false;
+            closeMetricTooltip();Ui.load(ctx);
             if(handle!=null){View old=handle;handle=null;showHandle(gamePkg);remove(old);}
             if(micBubble!=null){View old=micBubble;micBubble=null;showMicBubble();remove(old);}
             hud.hide();fpsHud.hide();companions.reflow();

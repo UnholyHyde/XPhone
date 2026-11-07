@@ -50,7 +50,7 @@ public class BoostService extends Service {
 
     public static void start(Context c) {
         Intent i = new Intent(c, BoostService.class);
-        try { c.startForegroundService(i); } catch (Exception ignored) { }
+        try { c.startForegroundService(i); } catch (Exception error) { android.util.Log.e("XPhone","Game service could not start",error); }
     }
 
     public static boolean hubOnScreen(){return hubForeground;}
@@ -134,7 +134,7 @@ public class BoostService extends Service {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            try { check(); } catch (Exception ignored) { }
+            try { check(); } catch (Exception error) { android.util.Log.e("XPhone","Game lifecycle check failed",error); }
             boolean interactive = getSystemService(PowerManager.class).isInteractive();
             if (!interactive && TouchTrace.enabled(BoostService.this)) TouchTrace.stop();
             handler.postDelayed(this, interactive ? TICK_MS : TICK_MS * 5);
@@ -161,6 +161,9 @@ public class BoostService extends Service {
             if(hiddenGame==null)overlay.syncHud();
             return;
         }
+        // Hide immediately on Home; keep only the existing profile-exit grace
+        // period, so a quick return does not reapply game actions.
+        if(fg.equals(launcher))overlay.suspendForHub(true);
         if (currentGame == null) return;
         // In multi-window the game can stay resumed while a companion gains focus.
         // Closing that companion need not emit another RESUMED event for the game.
