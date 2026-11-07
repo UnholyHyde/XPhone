@@ -214,7 +214,8 @@ public final class Overlay {
                     if(handle==h){int[] p=handlePlacement(edge);handleLp.x=p[0];handleLp.y=p[1];try{wm.updateViewLayout(h,handleLp);}catch(Exception ignored){}}return true;
             }return true;
         });
-        handle=h;try{wm.addView(h,handleLp);}catch(Exception e){handle=null;android.util.Log.w("XPhone","Handle window could not be attached",e);return;}
+        handle=h;try{wm.addView(h,handleLp);}catch(Exception e){handle=null;android.util.Log.w("XPhone","Handle window could not be attached",e);Diagnostics.failure(ctx,"overlay.handle.failed",e);return;}
+        Diagnostics.event(ctx, "overlay.handle.shown edge=" + edge);
         if(extraEnabled("mic"))showMicBubble();syncHud();
     }
     public void setSide(boolean leftSide){setHandleEdge(leftSide?HandleGeometry.LEFT:HandleGeometry.RIGHT);}
@@ -295,7 +296,6 @@ public final class Overlay {
 
     public void syncHud() {
         if(hubSuspended){hud.hide();fpsHud.hide();return;}
-        QuickRecorder.poll(ctx);
         companions.tick(ctx.getSystemService(android.os.PowerManager.class).isInteractive());
         ensureHandleVisible();
         if ((panelRoot!=null||handle!=null) && extraEnabled("hud")) hud.show(); else hud.hide();
@@ -628,7 +628,8 @@ public final class Overlay {
             lp.setBlurBehindRadius(dp(18));
         }
         panelRoot = root;
-        try { wm.addView(root, lp); } catch (Exception e) { panelRoot = null; return; }
+        try { wm.addView(root, lp); } catch (Exception e) { panelRoot = null; Diagnostics.failure(ctx,"overlay.panel.failed",e); return; }
+        Diagnostics.event(ctx, "overlay.panel.open compact");
 
         finishDisplaySwap(root);startHeaderMetrics();syncHud();syncMicPanelVisibility();
         PcLink.addListener(pcListener);
@@ -674,7 +675,8 @@ public final class Overlay {
         slideHeader=header;slideLeft=banks.getChildAt(0);slideRight=banks.getChildAt(2);
         boolean displaySwap=retiredPanel!=null;
         panelRoot=root;
-        try{wm.addView(root,lp);}catch(Exception e){panelRoot=null;panelView=null;tiles.clear();return;}
+        try{wm.addView(root,lp);}catch(Exception e){panelRoot=null;panelView=null;tiles.clear();Diagnostics.failure(ctx,"overlay.panel.failed",e);return;}
+        Diagnostics.event(ctx, "overlay.panel.open tactical");
         finishDisplaySwap(root);startHeaderMetrics();syncHud();syncMicPanelVisibility();
         PcLink.addListener(pcListener);refreshTiles();
         if(!displaySwap){
@@ -857,16 +859,66 @@ public final class Overlay {
         });body.addView(slider);body.addView(Ui.hint(ctx,"Яркость меняется при движении ползунка. Короткое нажатие плитки включает или выключает фиксацию.",12,Ui.MUTED,500));return body;
     }
     static View recordingControls(Context c){
-        LinearLayout box=new LinearLayout(c);box.setOrientation(LinearLayout.VERTICAL);
-        if(NativeRecorder.nativeAvailable(c))box.addView(Ui.hint(c,"Системная запись: звук и начало записи выбираются в окне телефона.",12,Ui.TEXT,500));
-        if(QuickRecorder.available(c))box.addView(Ui.hint(c,"Быстрая запись через Shizuku: без системного окна, без звука. Файлы — Movies/XPhone. Остановка — повторное нажатие или уведомление.",12,Ui.TEXT,500));
-        if(NativeRecorder.nativeAvailable(c)){TextView nativeMode=Ui.button(c,"Системная запись",!Prefs.get(c,"quick_record",false));nativeMode.setOnClickListener(v->{Prefs.put(c,"quick_record",false);android.widget.Toast.makeText(c,"Выбрана системная запись",android.widget.Toast.LENGTH_SHORT).show();});box.addView(nativeMode,Ui.lpMargins(c,-1,-2,0,10,0,0));}
-        if(QuickRecorder.available(c)){TextView quick=Ui.button(c,"Быстрая · без звука",Prefs.get(c,"quick_record",false));quick.setOnClickListener(v->{Prefs.put(c,"quick_record",true);android.widget.Toast.makeText(c,"Выбрана быстрая запись без звука",android.widget.Toast.LENGTH_SHORT).show();});box.addView(quick,Ui.lpMargins(c,-1,-2,0,10,0,0));
-            box.addView(Ui.text(c,"Битрейт быстрой записи, Мбит/с",12,Ui.MUTED,500),Ui.lpMargins(c,-1,-2,0,12,0,8));
-            int[] rates={4,8,12,20};int selected=0;for(int i=0;i<rates.length;i++)if(Prefs.getInt(c,"quick_record_mbps",12)==rates[i])selected=i;
-            box.addView(Ui.segmented(c,new String[]{"4","8","12","20"},selected,i->Prefs.putInt(c,"quick_record_mbps",rates[i])));
-            box.addView(Ui.hint(c,"Новое значение используется со следующего запуска быстрой записи.",11,Ui.MUTED,500),Ui.lpMargins(c,-1,-2,0,8,0,0));
-        }return box;
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int selected = Math.max(0, Math.min(2, Prefs.getInt(c, "record_quality", 1)));
+        TextView pixels = Ui.text(c, recordingPixels(c, selected), 13, Ui.TEXT, 600);
+        box.addView(pixels);
+        box.addView(Ui.segmented(c, new String[]{"720p", "1080p", "1440p"}, selected, i -> {
+            Prefs.putInt(c, "record_quality", i);
+            pixels.setText(recordingPixels(c, i));
+        }), Ui.lpMargins(c, -1, -2, 0, 6, 0, 4));
+        recordOption(c, box, "Микрофон", "record_mic");
+        recordOption(c, box, "Звук игры и приложений", "record_playback");
+        if (TouchTrace.available(c)) recordOption(c, box, "Светящиеся касания", "record_touches");
+        if (Build.VERSION.SDK_INT >= 34) {
+            android.widget.CheckBox chooseApp = new android.widget.CheckBox(c);
+            chooseApp.setText("Выбирать приложение для записи");
+            chooseApp.setTextColor(Ui.TEXT);
+            chooseApp.setButtonTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+            chooseApp.setChecked(Prefs.get(c, "record_choose_app", true));
+            chooseApp.setOnCheckedChangeListener((button, checked) -> Prefs.put(c, "record_choose_app", checked));
+            box.addView(chooseApp);
+        }
+        box.addView(OverlayRecording.opacityControls(c));
+        String hint = Build.VERSION.SDK_INT >= 34
+                ? "Без выбора приложения записывается весь экран. Подтверждение записи запрашивает Android. При захвате всего экрана кнопки могут закрываться чёрной областью."
+                : "При захвате всего экрана Android может закрывать кнопки записи чёрной областью.";
+        box.addView(Ui.hint(c, hint + " Звук игры записывается, если игра разрешает захват.", 11, Ui.MUTED, 500),
+                Ui.lpMargins(c, -1, -2, 0, 6, 0, 0));
+        return box;
+    }
+
+    private static String recordingPixels(Context c, int quality) {
+        Point size = OverlayRecording.outputSize(c, quality);
+        return String.format(java.util.Locale.forLanguageTag("ru"), "%d × %d · %.1f Мп", size.x, size.y,
+                size.x * (double) size.y / 1000000);
+    }
+
+    private static void recordOption(Context c, LinearLayout box, String title, String key) {
+        android.widget.CheckBox option = new android.widget.CheckBox(c);
+        option.setText(title);
+        option.setTextColor(Ui.TEXT);
+        option.setButtonTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+        option.setChecked(Prefs.get(c, key, false));
+        option.setOnCheckedChangeListener((button, checked) -> Prefs.put(c, key, checked));
+        box.addView(option);
+    }
+
+    private void showRecording(View anchor) {
+        LinearLayout body = (LinearLayout) recordingControls(ctx);
+        TextView start = Ui.button(ctx, "Начать запись", true);
+        start.setOnClickListener(v -> {
+            closePanel();
+            if (listener != null) listener.openedExternal();
+            try { OverlayRecording.request(ctx); }
+            catch (RuntimeException error) {
+                Diagnostics.failure(ctx, "record.launch.failed", error);
+                toast("Не удалось открыть запись экрана", R.drawable.ic_alert);
+            }
+        });
+        body.addView(start, Ui.lpMargins(ctx, -1, -2, 0, 8, 0, 0));
+        showPopup("Запись экрана", body, anchor);
     }
 
     private View buildUsbRule(){
@@ -984,6 +1036,7 @@ public final class Overlay {
         if(metricsSubscription!=null){TelemetryFeed.stop(metricsSubscription);metricsSubscription=null;}
         headerMetrics=null;headerCells.clear();
         if (panelRoot == null) return;
+        Diagnostics.event(ctx, "overlay.panel.close");
         PcLink.removeListener(pcListener);
         remove(panelRoot);
         panelRoot = null;
@@ -1004,9 +1057,7 @@ public final class Overlay {
         if(panelRoot==null){statesAt=0;return;}
         final String pkg = gamePkg;
         final FrameLayout activePanel=panelRoot;
-        final boolean recordWasVisible=tiles.containsKey(RECORD);
         Shell.background(() -> {
-            NativeRecorder.probe(ctx);
             Map<String, Boolean> states = new HashMap<>();
             for (String id : Booster.TOGGLES)
                 if (Booster.available(ctx, id)) states.put(id, Booster.read(ctx, id, pkg));
@@ -1014,7 +1065,6 @@ public final class Overlay {
             GamePower.State modes=GamePower.available(ctx)?GamePower.read(ctx,pkg):null;
             Shell.onMain(() -> {
                 if(panelRoot!=activePanel)return;
-                if(recordWasVisible!=(NativeRecorder.available(ctx)&&PanelFeatures.visible(ctx).contains(RECORD))){closePanel();openPanel();return;}
                 if(!powerBusy)powerState=modes;
                 for(Map.Entry<String,Boolean> entry:states.entrySet())if(!pendingToggles.contains(entry.getKey()))cachedStates.put(entry.getKey(),entry.getValue());statesAt=android.os.SystemClock.elapsedRealtime();
                 for (Map.Entry<String, Boolean> e : states.entrySet()) {
@@ -1187,10 +1237,10 @@ public final class Overlay {
                 view.addView(state, Ui.lpMargins(ctx, -2, -2, 0, 3, 0, 0));
             }
             view.setContentDescription(title());
-            view.setOnClickListener(v -> {pulse(view);click();});
+            view.setOnClickListener(v -> {Diagnostics.event(ctx, "overlay.action " + id);pulse(view);click();});
             view.setOnLongClickListener(v -> {
                 if("fps".equals(id))showPopup("FPS / Гц",FpsHud.controls(ctx,()->{syncHud();paint();}),view);
-                else if(RECORD.equals(id))showPopup("Режим записи",recordingControls(ctx),view);
+                else if(RECORD.equals(id) && !OverlayRecording.active())showRecording(view);
                 else if(MIC.equals(id))showPopup("Прозрачность кнопки",buildMicOpacity(),view);
                 else if(HUD.equals(id))showPopup("Мини-окно",MiniHud.controls(ctx,Overlay.this::applyHudPreference),view);
                 else if("apps".equals(id))showPopup("Приложения",companions.controls(),view);
@@ -1207,7 +1257,7 @@ public final class Overlay {
 
         int iconRes() { if("fps".equals(id))return R.drawable.ic_monitor;if("sensitivity".equals(id))return R.drawable.ic_frame_trace;if("apps".equals(id))return R.drawable.ic_monitor; if(RECORD.equals(id)) return R.drawable.ic_video; if(HUD.equals(id)) return R.drawable.ic_info; if(TOUCH.equals(id)) return R.drawable.ic_frame_trace; return MIC.equals(id) ? (Mic.muted()?R.drawable.ic_mic_off:R.drawable.ic_mic) : Booster.icon(id); }
         String title() { if("fps".equals(id))return "FPS / Гц";if("sensitivity".equals(id))return "Чувствительность";if("apps".equals(id))return "Окна"; if(RECORD.equals(id)) return "Запись"; if(HUD.equals(id)) return "Мини-окно"; if(TOUCH.equals(id)) return "Касания"; return MIC.equals(id) ? "Микрофон" : Ui.GLASS ? Booster.tinyTitle(id) : Booster.shortTitle(id); }
-        String hint() { if("fps".equals(id))return "Отдельное окно фактического FPS экрана и частоты дисплея";if("sensitivity".equals(id))return "Системная чувствительность Samsung для защитного стекла. Не разгон частоты опроса сенсора.";if("apps".equals(id))return "Выбранные приложения в системных окнах поверх игры; значок сворачивает и возвращает окно"; if(RECORD.equals(id)) return QuickRecorder.enabled(ctx)?"Быстрая запись через Shizuku без звука. Удержание открывает настройки.":"Открыть системную запись экрана. Звук и начало записи выбираются в окне телефона."; if(HUD.equals(id)) return "Показатели поверх игры; состав и прозрачность — в отдельном окне настроек"; if(TOUCH.equals(id)) return "Мягкие светящиеся точки под пальцами: без линий и координат. Исчезают сразу после отпускания."; return MIC.equals(id) ? "Плавающая кнопка, которая мгновенно выключает микрофон телефона" : Booster.hint(id); }
+        String hint() { if("fps".equals(id))return "Отдельное окно фактического FPS экрана и частоты дисплея";if("sensitivity".equals(id))return "Системная чувствительность Samsung для защитного стекла. Не разгон частоты опроса сенсора.";if("apps".equals(id))return "Выбранные приложения в системных окнах поверх игры; значок сворачивает и возвращает окно"; if(RECORD.equals(id)) return "Запись XPhone: качество, звук и касания"; if(HUD.equals(id)) return "Показатели поверх игры; состав и прозрачность — в отдельном окне настроек"; if(TOUCH.equals(id)) return "Мягкие светящиеся точки под пальцами: без линий и координат. Исчезают сразу после отпускания."; return MIC.equals(id) ? "Плавающая кнопка, которая мгновенно выключает микрофон телефона" : Booster.hint(id); }
 
         void setOn(boolean v) { on = v; paint(); }
 
@@ -1219,7 +1269,7 @@ public final class Overlay {
                 st=powerBusy?"Меняем…":powerState==null?"По кругу":powerState.label();
                 on=powerState!=null&&(powerState.focus||powerState.economy||"performance".equals(powerState.game)||"battery".equals(powerState.game));
             } else if (RECORD.equals(id)) {
-                st=QuickRecorder.active()?"Идёт · без звука":QuickRecorder.enabled(ctx)?"Без звука":"Системная";on=QuickRecorder.active();
+                on=OverlayRecording.active();st=on?"Идёт":"Настроить";
             } else if (HUD.equals(id)) {
                 on = extraEnabled("hud"); st = on ? "На экране" : "Скрыто";
             } else if (TOUCH.equals(id)) {
@@ -1242,7 +1292,7 @@ public final class Overlay {
             }
             state.setText(st);
             boolean quiet=Booster.DND.equals(id);
-            boolean lit = ((on && !action && !quiet) || (RECORD.equals(id)&&QuickRecorder.active())) && !(MIC.equals(id)&&Mic.muted());
+            boolean lit = ((on && !action && !quiet) || (RECORD.equals(id)&&OverlayRecording.active())) && !(MIC.equals(id)&&Mic.muted());
             if (Ui.GLASS && !tacticalTile) {
                 iconBox.setBackground(Ui.circle(lit ? Ui.ACCENT : Ui.TILE_OFF));
                 Ui.tint(icon, lit ? Ui.ON_ACCENT : 0xFFFFFFFF);
@@ -1264,13 +1314,10 @@ public final class Overlay {
             if("apps".equals(id)){if(!companions.openLast())showPopup("Приложения",companions.controls(),view);return;}
             if(Booster.PERF.equals(id)){cyclePowerMode(this);return;}
             if(RECORD.equals(id)){
-                if(QuickRecorder.enabled(ctx)||QuickRecorder.active()){
-                    boolean stopping=QuickRecorder.active();closePanel();
-                    Shell.background(()->{String result=stopping?QuickRecorder.stop(ctx):QuickRecorder.start(ctx);Shell.onMain(()->toast(result,R.drawable.ic_video));});return;
-                }
-                closePanel();
-                if(listener!=null)listener.openedExternal();
-                Shell.background(() -> {boolean ok=NativeRecorder.open(ctx);if(!ok)Shell.onMain(() -> toast("Не удалось открыть штатную запись экрана",R.drawable.ic_alert));});
+                if (OverlayRecording.active()) {
+                    closePanel();
+                    OverlayRecording.request(ctx);
+                } else showRecording(view);
                 return;
             }
             if (HUD.equals(id)) {

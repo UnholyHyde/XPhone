@@ -1,6 +1,5 @@
 package ru.xphone.booster;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -54,9 +53,9 @@ final class AppUpdates {
         if (!version.isEmpty() && compare(BuildConfig.VERSION_NAME, version) >= 0) {
             if (BuildConfig.VERSION_NAME.equals(version)) {
                 String notes = prefs.getString(PENDING_NOTES, "");
-                new AlertDialog.Builder(activity).setTitle("Что нового в XPhone " + version)
-                        .setMessage(notes.trim().isEmpty() ? "В релизе нет списка изменений." : notes)
-                        .setPositiveButton("Понятно", null).show();
+                activity.showThemedMessage("Что нового в XPhone " + version,
+                        notes.trim().isEmpty() ? "В релизе нет списка изменений." : notes);
+                Diagnostics.event(activity, "update.installed");
             }
             prefs.edit().remove(PENDING_VERSION).remove(PENDING_NOTES).apply();
             apkFile(activity).delete();
@@ -72,9 +71,11 @@ final class AppUpdates {
         }
         busy = true;
         lastCheck = SystemClock.elapsedRealtime();
+        Diagnostics.event(activity, manual ? "update.check.manual" : "update.check.auto");
         new Thread(() -> {
             try {
                 Update update = findUpdate();
+                Diagnostics.event(activity, update == null ? "update.current" : "update.available " + update.version);
                 activity.runOnUiThread(() -> {
                     busy = false;
                     if (!activity.canShowUpdate()) {
@@ -84,27 +85,28 @@ final class AppUpdates {
                     if (update != null && (!hasDownload() || !update.version.equals(activity
                             .getSharedPreferences("updates", Context.MODE_PRIVATE).getString(PENDING_VERSION, ""))))
                         offer(update);
-                    else if (manual) toast("У вас последняя версия XPhone для Android.");
+                    else if (manual) message("У вас последняя версия XPhone для Android.");
                 });
             } catch (Exception ex) {
+                Diagnostics.failure(activity, "update.check.failed", ex);
                 activity.runOnUiThread(() -> {
                     busy = false;
-                    if (manual && activity.canShowUpdate()) toast("Не удалось проверить обновления. Проверьте доступ к GitHub.");
+                    if (manual && activity.canShowUpdate()) message("Не удалось проверить обновления. Проверьте доступ к GitHub.");
                 });
             }
         }, "XPhone-update-check").start();
     }
 
     private void offer(Update update) {
-        new AlertDialog.Builder(activity).setTitle("Доступно обновление XPhone " + update.version)
-                .setMessage("Скачать APK и установить поверх текущей версии? Настройки и библиотека игр сохранятся.")
-                .setNegativeButton("Позже", null)
-                .setPositiveButton("Скачать", (dialog, which) -> download(update)).show();
+        activity.showThemedPrompt("Доступно обновление XPhone " + update.version,
+                "Скачать APK и установить поверх текущей версии? Настройки и библиотека игр сохранятся.",
+                "Позже", "Скачать", () -> download(update));
     }
 
     private void download(Update update) {
         if (busy) return;
         busy = true;
+        Diagnostics.event(activity, "update.download.start " + update.version);
         toast("XPhone скачивает обновление…");
         Context context = activity.getApplicationContext();
         new Thread(() -> {
@@ -117,14 +119,16 @@ final class AppUpdates {
                 if (!context.getSharedPreferences("updates", Context.MODE_PRIVATE).edit()
                         .putString(PENDING_VERSION, update.version).putString(PENDING_NOTES, update.notes).commit())
                     throw new IOException("Pending update");
+                Diagnostics.event(context, "update.download.verified " + update.version);
                 activity.runOnUiThread(() -> {
                     busy = false;
                     if (activity.canShowUpdate()) installDownloaded();
                 });
             } catch (Exception ex) {
+                Diagnostics.failure(context, "update.download.failed", ex);
                 activity.runOnUiThread(() -> {
                     busy = false;
-                    if (activity.canShowUpdate()) toast("Не удалось скачать или проверить APK. Попробуйте ещё раз.");
+                    if (activity.canShowUpdate()) message("Не удалось скачать или проверить APK. Попробуйте ещё раз.");
                 });
             } finally {
                 partial.delete();
@@ -141,18 +145,20 @@ final class AppUpdates {
         if (busy || !hasDownload()) return;
         try {
             if (!activity.getPackageManager().canRequestPackageInstalls()) {
-                new AlertDialog.Builder(activity).setTitle("Разрешение на обновление")
-                        .setMessage("Разрешите XPhone устанавливать обновления. Затем Android попросит подтвердить установку.")
-                        .setNegativeButton("Позже", null)
-                        .setPositiveButton("Открыть настройки", (dialog, which) -> openInstallPermission()).show();
+                Diagnostics.event(activity, "update.install.permission_required");
+                activity.showThemedPrompt("Разрешение на обновление",
+                        "Разрешите XPhone устанавливать обновления. Затем Android попросит подтвердить установку.",
+                        "Позже", "Открыть настройки", this::openInstallPermission);
                 return;
             }
             Uri uri = Uri.parse("content://" + activity.getPackageName() + ".updates/update.apk");
             activity.startActivity(new Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uri, UpdateApkProvider.MIME)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+            Diagnostics.event(activity, "update.install.requested");
         } catch (Exception ex) {
-            toast("Не удалось открыть системный установщик Android.");
+            Diagnostics.failure(activity, "update.install.failed", ex);
+            message("Не удалось открыть системный установщик Android.");
         }
     }
 
@@ -161,7 +167,8 @@ final class AppUpdates {
             activity.startActivityForResult(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:" + activity.getPackageName())), INSTALL_PERMISSION);
         } catch (Exception ex) {
-            toast("Не удалось открыть настройки установки Android.");
+            Diagnostics.failure(activity, "update.permission.failed", ex);
+            message("Не удалось открыть настройки установки Android.");
         }
     }
 
@@ -265,5 +272,9 @@ final class AppUpdates {
 
     private void toast(String text) {
         Toast.makeText(activity, text, Toast.LENGTH_LONG).show();
+    }
+
+    private void message(String text) {
+        activity.showThemedMessage("Обновления XPhone", text);
     }
 }

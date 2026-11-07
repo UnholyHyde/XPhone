@@ -75,6 +75,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        Diagnostics.init(this);
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         content = new LinearLayout(this);
@@ -131,6 +132,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();BoostService.hubVisible();
+        Diagnostics.event(this, "hub.open");
         resumed = true;
         PcLink.start(this);
         lastPc = PcLink.state();
@@ -153,6 +155,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        Diagnostics.event(this, "hub.leave");
         resumed = false;
         BoostService.hubHidden();
         PcLink.removeListener(pcListener);
@@ -179,6 +182,7 @@ public class MainActivity extends Activity {
         navigation.setBackground(Ui.box(this,Ui.BG,Ui.LINE,0));
         int selected=tab==TAB_GAME?0:tab==TAB_PANEL?1:2;
         navigation.addView(Ui.segmented(this,new String[]{"Игры","Панель","Настройки"},selected,i->{
+            Diagnostics.event(this, "hub.tab " + new String[]{"games", "panel", "settings"}[i]);
             tab=new int[]{TAB_GAME,TAB_PANEL,TAB_SETTINGS}[i];render();scroll.scrollTo(0,0);
         }),new LinearLayout.LayoutParams(-1,-2));
 
@@ -428,7 +432,7 @@ public class MainActivity extends Activity {
             fps.addView(FpsHud.controls(this, BoostService::refreshHud));
             menuGroup("Окно FPS и герцовки", fps);
         }
-        if (NativeRecorder.available(this)) {
+        if (OverlayRecording.available()) {
             LinearLayout recording = card();
             recording.addView(Overlay.recordingControls(this));
             menuGroup("Запись экрана", recording);
@@ -665,6 +669,11 @@ public class MainActivity extends Activity {
         TextView issues=Ui.button(this,"GitHub Issues — ошибки и предложения",false);
         issues.setOnClickListener(v->openExternalLink("https://github.com/UnholyHyde/XPhone/issues"));
         support.addView(issues,Ui.lpMargins(this,-1,-2,0,8,0,0));
+        TextView diagnostics = Ui.button(this, "Журнал диагностики", false);
+        diagnostics.setOnClickListener(v -> showThemedPrompt("Журнал диагностики",
+                "В файле будут версия XPhone, модель телефона, версия Android и технические события. Журнал хранится на телефоне и отправляется только через выбранное вами приложение.",
+                "Закрыть", "Поделиться", () -> Diagnostics.share(this)));
+        support.addView(diagnostics, Ui.lpMargins(this,-1,-2,0,8,0,0));
         menuGroup("Поддержка и связь", support);
 
         TextView credits = Ui.text(this, "Иконки Lucide (ISC), шрифты Manrope и Unbounded (OFL), Shizuku API (Apache 2.0)", 11, Ui.DIM, 500);
@@ -848,10 +857,28 @@ public class MainActivity extends Activity {
     }
 
     /** Собственное оформление без системной шапки и серой рамки AlertDialog. */
-    private android.app.Dialog showThemedInfo(String heading, LinearLayout body, String closeLabel, Runnable after) {
+    void showThemedPrompt(String title, String message, String close, String action, Runnable onAction) {
+        LinearLayout body = card();
+        body.addView(Ui.text(this, message, 14, Ui.TEXT, 500));
+        TextView primary = Ui.button(this, action, true);
+        body.addView(primary, Ui.lpMargins(this, -1, -2, 0, 16, 0, 0));
+        android.app.Dialog dialog = showThemedInfo(title, body, close, null);
+        primary.setOnClickListener(v -> {
+            dialog.dismiss();
+            onAction.run();
+        });
+    }
+
+    void showThemedMessage(String title, String message) {
+        LinearLayout body = card();
+        body.addView(Ui.text(this, message, 14, Ui.TEXT, 500));
+        showThemedInfo(title, body, "Понятно", null);
+    }
+
+    android.app.Dialog showThemedInfo(String heading, LinearLayout body, String closeLabel, Runnable after) {
         android.app.Dialog dialog=new android.app.Dialog(this);
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        body.setBackground(Ui.box(this,0xFF17191F,Ui.LINE2,Ui.R_CARD));
+        body.setBackground(Ui.box(this,Ui.GLASS ? 0xFF171C25 : Ui.CARD,Ui.LINE2,Ui.R_CARD));
         TextView title=Ui.text(this,heading,18,Ui.TEXT,800);
         body.addView(title,0,Ui.lpMargins(this,-1,-2,0,0,0,16));
         TextView close=Ui.button(this,closeLabel,false);

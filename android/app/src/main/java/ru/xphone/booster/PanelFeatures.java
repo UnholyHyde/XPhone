@@ -17,7 +17,7 @@ final class PanelFeatures {
             case "sensitivity":return TouchSensitivity.available(c);
             case "apps": return CompanionApps.available(c);
             case "res": return Shell.ready(c)&&!DisplayResolution.modes(c).isEmpty();
-            case "record": return NativeRecorder.available(c);
+            case "record": return OverlayRecording.available();
             case "touch": return TouchTrace.available(c);
             case "mic": return Mic.supported(c);
             default: return Booster.supported(id) && Booster.available(c,id);

@@ -15,8 +15,8 @@ android {
         applicationId = "ru.xphone.booster"
         minSdk = 26
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.17.9"
+        versionCode = 50
+        versionName = "1.17.12"
     }
 
     buildFeatures {

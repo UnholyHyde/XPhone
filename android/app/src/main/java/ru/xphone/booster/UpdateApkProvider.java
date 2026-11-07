@@ -17,17 +17,22 @@ public final class UpdateApkProvider extends ContentProvider {
     @Override public boolean onCreate() { return true; }
 
     @Override public String getType(Uri uri) {
-        return valid(uri) ? MIME : null;
+        return switch (uri.getEncodedPath()) {
+            case "/update.apk" -> MIME;
+            case "/diagnostics.txt" -> "text/plain";
+            default -> null;
+        };
     }
 
     @Override public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        if (!valid(uri) || !"r".equals(mode)) throw new FileNotFoundException();
-        return ParcelFileDescriptor.open(AppUpdates.apkFile(getContext()), ParcelFileDescriptor.MODE_READ_ONLY);
+        File file = file(uri);
+        if (file == null || !"r".equals(mode)) throw new FileNotFoundException();
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
     }
 
     @Override public Cursor query(Uri uri, String[] projection, String selection, String[] args, String order) {
-        if (!valid(uri)) return null;
-        File file = AppUpdates.apkFile(getContext());
+        File file = file(uri);
+        if (file == null) return null;
         String[] columns = projection == null
                 ? new String[]{OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE} : projection;
         MatrixCursor cursor = new MatrixCursor(columns, 1);
@@ -35,7 +40,7 @@ public final class UpdateApkProvider extends ContentProvider {
             MatrixCursor.RowBuilder row = cursor.newRow();
             for (String column : columns) {
                 row.add(switch (column) {
-                    case OpenableColumns.DISPLAY_NAME -> "XPhone-update.apk";
+                    case OpenableColumns.DISPLAY_NAME -> file.getName();
                     case OpenableColumns.SIZE -> file.length();
                     default -> null;
                 });
@@ -44,8 +49,11 @@ public final class UpdateApkProvider extends ContentProvider {
         return cursor;
     }
 
-    private boolean valid(Uri uri) {
-        return "/update.apk".equals(uri.getEncodedPath());
+    private File file(Uri uri) {
+        String path = uri.getEncodedPath();
+        if ("/update.apk".equals(path)) return AppUpdates.apkFile(getContext());
+        if ("/diagnostics.txt".equals(path)) return Diagnostics.exportFile(getContext());
+        return null;
     }
 
     @Override public Uri insert(Uri uri, ContentValues values) { throw new UnsupportedOperationException(); }

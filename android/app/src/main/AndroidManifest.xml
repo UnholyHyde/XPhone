@@ -20,6 +20,9 @@
     <!-- Служба, которая следит за играми -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -59,6 +62,12 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Игровая панель поверх игр: показывает язычок и панель настроек при запуске игры" />
         </service>
+        <activity android:name=".RecordingConsent" android:exported="false"
+            android:excludeFromRecents="true" android:taskAffinity=""
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+        <service android:name=".OverlayRecording" android:exported="false"
+            android:foregroundServiceType="mediaProjection|microphone" />
 
         <receiver
             android:name=".BootReceiver"

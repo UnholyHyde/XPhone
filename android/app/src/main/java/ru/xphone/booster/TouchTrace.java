@@ -17,6 +17,11 @@ public final class TouchTrace {
     private static final java.util.concurrent.atomic.AtomicInteger generation=new java.util.concurrent.atomic.AtomicInteger();
     public static boolean available(Context c){return Shell.ready(c) && Prefs.get(c,"glow_supported",true);}
     public static boolean enabled(Context c){return running;}
+    static float[] recordingPoints() {
+        TouchGlow view = glow;
+        return view == null ? NO_POINTS : view.currentPoints();
+    }
+    private static final float[] NO_POINTS = new float[0];
     public static void probe(Context c){if(Shell.ready(c))Prefs.put(c,"glow_supported",Shell.touchAvailable(c));}
     /** Called on Shell.background, never on the UI thread. */
     public static boolean set(Context c,boolean on){
