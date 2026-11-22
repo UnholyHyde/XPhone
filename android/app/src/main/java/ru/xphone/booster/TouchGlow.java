@@ -41,6 +41,7 @@ final class TouchGlow extends View {
             waking.set(false);if(closed||drawing)return;drawing=true;postOnAnimation(frame);
         });
     }
+    float[] currentPoints() { return points; }
     private final Runnable frame=new Runnable(){public void run(){
         if(closed)return;
         invalidate();

@@ -9,7 +9,7 @@
     <AssemblyName>XPhone</AssemblyName>
     <RootNamespace>XPhone</RootNamespace>
     <Product>XPhone</Product>
-    <Version>1.4.2</Version>
+    <Version>1.4.4</Version>
     <Description>XPhone — экран и звук Android-телефона на ПК (на основе scrcpy)</Description>
     <ApplicationIcon>Assets\xphone.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Using Include="System.IO" />
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
 
   <ItemGroup>

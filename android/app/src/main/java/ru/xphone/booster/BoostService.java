@@ -49,8 +49,12 @@ public class BoostService extends Service {
     private BroadcastReceiver batteryReceiver;
 
     public static void start(Context c) {
+        if (!Prefs.enabled(c)) return;
         Intent i = new Intent(c, BoostService.class);
-        try { c.startForegroundService(i); } catch (Exception ignored) { }
+        try { c.startForegroundService(i); } catch (Exception error) {
+            android.util.Log.e("XPhone","Game service could not start",error);
+            Diagnostics.failure(c, "service.start.failed", error);
+        }
     }
 
     public static boolean hubOnScreen(){return hubForeground;}
@@ -84,12 +88,16 @@ public class BoostService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Diagnostics.init(this);
+        Diagnostics.event(this, "service.start overlay=" + MainActivity.overlayOk(this)
+                + " usage=" + MainActivity.usageOk(this) + " shizuku=" + Shell.state(this));
         instance = this;
         startForegroundNotice();
         overlay = new Overlay(this, new Overlay.Listener() {
             @Override public void openedExternal() { externalUntil = System.currentTimeMillis() + EXTERNAL_GRACE_MS; }
             @Override public void restartGame(){restartCurrentGame();}
             @Override public void hideUntilExit() {
+                Diagnostics.event(BoostService.this, "overlay.hide_until_exit");
                 hiddenGame = currentGame;reentry.hide(System.currentTimeMillis());
                 overlay.hideAll();
                 overlay.toast("Оверлей скрыт до перезахода в игру", R.drawable.ic_eye_off);
@@ -98,7 +106,7 @@ public class BoostService extends Service {
         overlay.suspendForHub(hubForeground);
         launcher = homePackage();
         // Если прошлый раз что-то поменяли и не вернули (например, телефон перезагрузился) — вернуть.
-        Shell.background(() -> { FullFocus.stop(this);if(Prefs.restore(this)&&Booster.hasChanges(this))Booster.restoreAll(this); TouchTrace.restore(this); TouchTrace.probe(this); Telemetry.probe(this); ScreenFrames.probe(this);TouchSensitivity.probe(this);OemBooster.restore(this);TouchSensitivity.restore(this);Prefs.put(this,"privacy_available",Shell.privacyAvailable(this)); GamePower.probe(this); NativeRecorder.probe(this); CompanionApps.probe(this); });
+        Shell.background(() -> { FullFocus.stop(this);if(Prefs.restore(this)&&Booster.hasChanges(this))Booster.restoreAll(this); TouchTrace.restore(this); TouchTrace.probe(this); Telemetry.probe(this); ScreenFrames.probe(this);TouchSensitivity.probe(this);OemBooster.restore(this);TouchSensitivity.restore(this);Prefs.put(this,"privacy_available",Shell.privacyAvailable(this)); GamePower.probe(this); CompanionApps.probe(this); });
         handler.post(tick);
         PcLink.start(this);
     }
@@ -106,7 +114,6 @@ public class BoostService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if(intent!=null&&"ru.xphone.booster.STOP_FOCUS".equals(intent.getAction()))Shell.background(()->{boolean restored=FullFocus.stop(this);Shell.onMain(()->{overlay.refreshIfOpen();toast(restored?"Full Focus выключен":"Не все настройки восстановлены — проверьте Shizuku",R.drawable.ic_info);});});
-        if(intent!=null&&"ru.xphone.booster.STOP_RECORD".equals(intent.getAction()))Shell.background(()->{String message=QuickRecorder.stop(this);Shell.onMain(()->toast(message,R.drawable.ic_video));});
         if (intent != null && ACTION_SHOW_PANEL.equals(intent.getAction())) {
             hiddenGame=null;reentry.clear();
             // Проверка панели из настроек: показать без игры.
@@ -118,12 +125,13 @@ public class BoostService extends Service {
 
     @Override
     public void onDestroy() {
+        Diagnostics.event(this, "service.stop");
         handler.removeCallbacks(tick);
         stopBatteryWatch();
-        StreamPrivacy.stop(this);PcLink.stop();
+        if (!Prefs.usageMode(this).hasStream()) StreamPrivacy.stop(this);
+        // Связь с ПК нужна и в режиме стрима, когда игровая служба остановлена.
         if (overlay != null) overlay.hideAll();
         if (currentGame != null) afterGame();
-        else if(QuickRecorder.active())Shell.background(()->QuickRecorder.stop(this));
         instance = null;
         super.onDestroy();
     }
@@ -134,7 +142,7 @@ public class BoostService extends Service {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            try { check(); } catch (Exception ignored) { }
+            try { check(); } catch (Exception error) { android.util.Log.e("XPhone","Game lifecycle check failed",error); }
             boolean interactive = getSystemService(PowerManager.class).isInteractive();
             if (!interactive && TouchTrace.enabled(BoostService.this)) TouchTrace.stop();
             handler.postDelayed(this, interactive ? TICK_MS : TICK_MS * 5);
@@ -161,6 +169,9 @@ public class BoostService extends Service {
             if(hiddenGame==null)overlay.syncHud();
             return;
         }
+        // Hide immediately on Home; keep only the existing profile-exit grace
+        // period, so a quick return does not reapply game actions.
+        if(fg.equals(launcher))overlay.suspendForHub(true);
         if (currentGame == null) return;
         // In multi-window the game can stay resumed while a companion gains focus.
         // Closing that companion need not emit another RESUMED event for the game.
@@ -196,6 +207,7 @@ public class BoostService extends Service {
     private void onGameStart(String pkg) {
         if(hiddenGame!=null&&!hiddenGame.equals(pkg)){hiddenGame=null;reentry.clear();}
         boolean switched = currentGame != null;
+        Diagnostics.event(this, "game.start switched=" + switched + " auto_panel=" + Prefs.autoPanel(this));
         android.util.Log.i("XPhone", "game start: " + pkg + " switched=" + switched + " welcome=" + Prefs.welcome(this) + " autoPanel=" + Prefs.autoPanel(this));
         currentGame = pkg;manualUsbRule=false;passByLevel=false;stopBatteryWatch();
         overlay.hideAll();
@@ -235,7 +247,8 @@ public class BoostService extends Service {
                 }
             }
         });
-        if (!switched && Prefs.get(this, Prefs.AUTO_STREAM, false) && PcLink.state() != PcLink.State.STREAMING) {
+        if (!switched && Prefs.usageMode(this) == Prefs.UsageMode.BOTH &&
+                Prefs.get(this, Prefs.AUTO_STREAM, false) && PcLink.state() != PcLink.State.STREAMING) {
             streamByGame = true;
             PcLink.requestStart(this);
         }
@@ -255,8 +268,8 @@ public class BoostService extends Service {
 
     /** Вернуть всё как было до игры. */
     private void afterGame() {
+        Diagnostics.event(this, "game.end");
         stopBatteryWatch();
-        if(QuickRecorder.active())Shell.background(()->{String message=QuickRecorder.stop(this);Shell.onMain(()->toast(message,R.drawable.ic_video));});
         Dnd.reset();
         passByLevel = false;manualUsbRule=false;
         Shell.background(() -> {
@@ -337,14 +350,10 @@ public class BoostService extends Service {
                 PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_gamepad)
-                .setContentTitle(FullFocus.active()?"Full Focus включён":QuickRecorder.active()?"Идёт запись экрана · без звука":"XPhone следит за играми")
+                .setContentTitle(FullFocus.active()?"Full Focus включён":"XPhone следит за играми")
                 .setContentText("Двойное нажатие на язычок открывает панель")
                 .setContentIntent(open)
                 .setOngoing(true);
-        if(QuickRecorder.active()){
-            PendingIntent stop=PendingIntent.getService(this,91,new Intent(this,BoostService.class).setAction("ru.xphone.booster.STOP_RECORD"),PendingIntent.FLAG_IMMUTABLE);
-            builder.addAction(new Notification.Action.Builder(null,"Остановить запись",stop).build());
-        }
         if(FullFocus.active()){
             PendingIntent stop=PendingIntent.getService(this,92,new Intent(this,BoostService.class).setAction("ru.xphone.booster.STOP_FOCUS"),PendingIntent.FLAG_IMMUTABLE);
             builder.addAction(new Notification.Action.Builder(null,"Выключить Full Focus",stop).build());

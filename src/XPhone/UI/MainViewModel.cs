@@ -38,11 +38,13 @@ public sealed class MainViewModel : Observable, IDisposable
     public DeviceWatcher Watcher { get; }
     public AppSettings Settings { get; }
     public ScrcpySession? Session { get; private set; }
+    private StreamWindow? _streamWindow;
 
     private readonly Dispatcher _ui;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _restartTimer;
     private readonly DispatcherTimer _audioTimer;
+    private readonly HashSet<string> _adjustedAudioSessions = new();
     private bool _suppressAuto;          // пользователь сам нажал «Отключить»
     private bool _windowShown;
     private bool _warnedThisSession;
@@ -89,6 +91,12 @@ public sealed class MainViewModel : Observable, IDisposable
 
     private void OnPhoneCommand(string key, string cmd)
     {
+        if (cmd == "SHIZUKU_START")
+        {
+            var item = Devices.FirstOrDefault(x => x.IsReady && x.Device.Key == key);
+            if (item != null) _ = Adb.EnsureShizukuAsync(item.Device);
+            return;
+        }
         if (cmd == "START")
         {
             if (Session != null && Session.Device.Key == key && State != ConnState.Idle) return;
@@ -245,7 +253,7 @@ public sealed class MainViewModel : Observable, IDisposable
             {
                 var d = Session.Device;
                 var p = Settings.ProfileFor(d.HardwareSerial);
-                return $"{d.DisplayName} · {d.TransportText} · {ScrcpyArgs.Describe(d, p)}";
+                return $"{d.DisplayName} · {d.TransportText} · {ScrcpyArgs.Describe(d, p, Session.VideoResolution)}";
             }
             if (NoDevices) return "Подключите телефон кабелем или по Wi-Fi";
             return Selected is { IsReady: true } ? "Нажмите «Подключить»" : "Телефон не готов";
@@ -283,6 +291,10 @@ public sealed class MainViewModel : Observable, IDisposable
         var profile = Settings.ProfileFor(device.HardwareSerial);
         var s = new ScrcpySession(Adb, device, ScrcpyArgs.Build(device, profile));
         s.WindowShown += x => _ui.BeginInvoke(() => OnWindowShown(x));
+        s.VideoResolutionChanged += x => _ui.BeginInvoke(() =>
+        {
+            if (x == Session) Raise(nameof(StatusDetail));
+        });
         s.Exited += x => _ui.BeginInvoke(() => OnExited(x));
         s.LogLine += (x, line) =>
         {
@@ -321,11 +333,35 @@ public sealed class MainViewModel : Observable, IDisposable
 
     private void OnWindowShown(ScrcpySession s)
     {
-        if (s != Session) return;
+        if (s != Session || s.HasExited) return;
+        if (Core.Win32.GetWindowRect(s.Window, out var bounds))
+        {
+            var window = new StreamWindow(s, Settings.ProfileFor(s.Device.HardwareSerial), bounds);
+            window.BackgroundFailed += () => ShowBackdropError();
+            window.Show();
+            if (window.Attached)
+            {
+                _streamWindow = window;
+                window.SetBackdrop(Settings.StreamBackdrop);
+                s.SetHostWindow(new System.Windows.Interop.WindowInteropHelper(window).Handle);
+                window.Closing += (_, _) =>
+                {
+                    if (_streamWindow == window && Session == s) _ = DisconnectAsync();
+                };
+                window.Closed += (_, _) => { if (_streamWindow == window) _streamWindow = null; };
+            }
+            else
+            {
+                window.Close();
+                ShowBanner(new HumanMessage("Не удалось встроить окно трансляции",
+                    "Трансляция открыта в отдельном окне. Фон доступен во встроенном окне."), null);
+            }
+        }
         _windowShown = true;
         _autoRetries = 0;
         _connectedAt = DateTime.UtcNow;
         _lastAudio = DateTime.MinValue;
+        _adjustedAudioSessions.Clear();
         State = ConnState.Connected;
         if (Settings.RememberPhone && s.Device.HardwareSerial != null)
         {
@@ -334,6 +370,7 @@ public sealed class MainViewModel : Observable, IDisposable
             SaveSoon();
         }
         _audioTimer.Start();
+        PollAudio();
         RaiseState();
     }
 
@@ -341,6 +378,7 @@ public sealed class MainViewModel : Observable, IDisposable
     {
         if (s != Session) return;
         Session = null;
+        CloseStreamWindow();
         _audioTimer.Stop();
         Watcher.Paused = false;
         State = ConnState.Idle;
@@ -379,6 +417,7 @@ public sealed class MainViewModel : Observable, IDisposable
         if (Session == s)
         {
             Session = null;
+            CloseStreamWindow();
             _audioTimer.Stop();
             Watcher.Paused = false;
             State = ConnState.Idle;
@@ -392,13 +431,37 @@ public sealed class MainViewModel : Observable, IDisposable
         if (s == null || State != ConnState.Connected) return;
         var rect = s.CurrentRect();
         var device = s.Device;
+        var oldWindow = _streamWindow;
+        _streamWindow = null;
         // Старое окно больше не «текущее»: его закрытие не должно считаться концом трансляции.
         Session = null;
         _audioTimer.Stop();
         await s.StopAsync();
+        oldWindow?.Close();
         if (Session != null) return; // пока закрывали, уже подключили заново
         StartSession(device, rect);
     }
+
+    private void CloseStreamWindow()
+    {
+        var window = _streamWindow;
+        _streamWindow = null;
+        window?.Close();
+    }
+
+    public string BackdropName => string.IsNullOrEmpty(Settings.StreamBackdrop)
+        ? "Фон по умолчанию" : Path.GetFileName(Settings.StreamBackdrop);
+
+    public void SetStreamBackdrop(string? path)
+    {
+        Settings.StreamBackdrop = path;
+        Raise(nameof(BackdropName));
+        SaveSoon();
+        _streamWindow?.SetBackdrop(path);
+    }
+
+    private void ShowBackdropError() => ShowBanner(new HumanMessage("Фон не открылся",
+        "Проверьте, что файл доступен. Для видео попробуйте MP4 с кодеком H.264."), null);
 
     // ── Звук ────────────────────────────────────────────────────────────
 
@@ -409,11 +472,25 @@ public sealed class MainViewModel : Observable, IDisposable
 
     public string AudioLive => AudioFlowing ? "Звук идёт" : "Тишина";
 
+    public int StreamVolume
+    {
+        get => Math.Clamp(Settings.StreamVolume, 0, 100);
+        set
+        {
+            if (StreamVolume == value) return;
+            Settings.StreamVolume = Math.Clamp(value, 0, 100);
+            _adjustedAudioSessions.Clear();
+            Raise(nameof(StreamVolume));
+            SaveSoon();
+            PollAudio();
+        }
+    }
+
     private void PollAudio()
     {
         var s = Session;
-        if (s == null || State != ConnState.Connected) return;
-        var peak = AudioMeter.PeakForProcess(s.ProcessId);
+        if (s == null || !ShowAudioLive || s.HasExited) return;
+        var peak = AudioMeter.PeakForProcess(s.ProcessId, StreamVolume / 100f, _adjustedAudioSessions);
         if (peak is > 0.002f) _lastAudio = DateTime.UtcNow;
         Raise(nameof(AudioLive), nameof(AudioFlowing), nameof(ShowAudioLive));
     }
@@ -495,6 +572,8 @@ public sealed class MainViewModel : Observable, IDisposable
     {
         get
         {
+            if (Profile.Quality == QualityMode.Phone)
+                return "Трансляция подстраивается под разрешение экрана телефона.";
             var d = Selected?.Device;
             if (!ScrcpyArgs.PhoneLimitsQuality(d, Profile)) return "";
             var where = d!.IsSamsung
@@ -748,6 +827,7 @@ public sealed class MainViewModel : Observable, IDisposable
         Watcher.Dispose();
         Link.Dispose();
         Session?.Kill();
+        CloseStreamWindow();
         Adb.KillServerIfOurs();
     }
 }

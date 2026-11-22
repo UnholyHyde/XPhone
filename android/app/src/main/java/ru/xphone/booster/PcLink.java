@@ -141,6 +141,7 @@ public final class PcLink {
      * и ждём, пока XPhone на ПК найдёт телефон (до полутора минут).
      */
     public static void requestStart(Context c) {
+        if (!Prefs.usageMode(c).hasStream()) return;
         message = null;
         if (state != State.NO_PC) {
             Shell.background(() -> {
@@ -163,6 +164,14 @@ public final class PcLink {
         pendingStartUntil = 0;
         Shell.background(() -> send("STOP"));
         changed();
+    }
+
+    public static void requestShizuku() {
+        Shell.background(() -> {
+            boolean sent = send("SHIZUKU_START");
+            message = sent ? "Запрос запуска Shizuku отправлен на ПК" : "Нет связи с XPhone на ПК";
+            changed();
+        });
     }
 
     /** Только найти компьютер (без трансляции). */

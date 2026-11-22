@@ -84,7 +84,7 @@ public final class Shell {
     }
 
     public static boolean privacyAvailable(Context c){IShellService s=bind(c.getApplicationContext());try{return s!=null&&s.privacyAvailable();}catch(Exception e){return false;}}
-    public static String streamPrivacy(Context c,boolean active){IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.streamPrivacy(active,android.os.Process.myUid()/100000);}catch(Exception e){return "ERROR";}}
+    public static String streamPrivacy(Context c,boolean active){IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.streamPrivacy(active,android.os.Process.myUid()/100000,FullFocus.active()||Prefs.get(c,"stream_lock_shade",false));}catch(Exception e){return "ERROR";}}
     public static String resumeGame(Context c,String component){IShellService s=bind(c.getApplicationContext());try{return s==null?"UNAVAILABLE":s.resumeGame(component,android.os.Process.myUid()/100000);}catch(Exception e){return "UNAVAILABLE";}}
     public static String restartApp(Context c,String component){IShellService s=bind(c.getApplicationContext());try{return s==null?"DENIED":s.restartApp(component,android.os.Process.myUid()/100000);}catch(Exception e){return "ERROR";}}
     public static String startRecord(Context c,String name,int mbps){IShellService s=bind(c.getApplicationContext());try{return s==null?"ERROR":s.startRecord(name,mbps);}catch(Exception e){return "ERROR";}}

@@ -42,7 +42,10 @@ public class MainActivity extends Activity {
 
     private final Shizuku.OnRequestPermissionResultListener permListener = (code, result) -> runOnUiThread(()->{render();probeCompanion();});
     private final Shizuku.OnBinderReceivedListener binderListener = () -> runOnUiThread(()->{render();probeCompanion();});
-    private final Shizuku.OnBinderDeadListener deadListener = () -> runOnUiThread(this::render);
+    private final Shizuku.OnBinderDeadListener deadListener = () -> {
+        Diagnostics.event(this, "shizuku.disconnected");
+        runOnUiThread(this::render);
+    };
 
     /** Состояние ПК обновляется, не уводя пользователя из хаба. */
     private final PcLink.Listener pcListener = () -> {
@@ -75,6 +78,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        Diagnostics.init(this);
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         content = new LinearLayout(this);
@@ -121,19 +125,43 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    private final AppUpdates updates = new AppUpdates(this);
+    private boolean resumed;
+
+    boolean canShowUpdate() {
+        return resumed && !isFinishing() && !isDestroyed();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();BoostService.hubVisible();
+        Diagnostics.event(this, "hub.open");
+        resumed = true;
         PcLink.start(this);
         lastPc = PcLink.state();
         PcLink.addListener(pcListener);
         GameHistory.invalidate();render();
         probeCompanion();
         if (Prefs.enabled(this) && permissionsOk(this)) BoostService.start(this);
+        if (!Prefs.modeChosen(this)) {
+            showFirstRun();
+            return;
+        }
+        int setupStep = Prefs.getInt(this, "shizuku_setup_step", 0);
+        if (setupStep != 0) {
+            Prefs.putInt(this, "shizuku_setup_step", 0);
+            scroll.post(() -> { if (canShowUpdate()) showShizukuWirelessStep(setupStep); });
+            return;
+        }
+        updates.onResume();
     }
 
     private void probeCompanion() {
         Shell.background(()->{
+            if (!Prefs.usageMode(this).hasHub()) {
+                Prefs.put(this,"privacy_available",Shell.privacyAvailable(this));
+                return;
+            }
             boolean before=CompanionApps.available(this);
             boolean oldFrames=ScreenFrames.available(this),oldSensitivity=TouchSensitivity.available(this),oldPrivacy=Prefs.get(this,"privacy_available",false);
             ScreenFrames.probe(this);TouchSensitivity.probe(this);Prefs.put(this,"privacy_available",Shell.privacyAvailable(this));
@@ -144,6 +172,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        Diagnostics.event(this, "hub.leave");
+        resumed = false;
         BoostService.hubHidden();
         PcLink.removeListener(pcListener);
         super.onPause();
@@ -152,6 +182,9 @@ public class MainActivity extends Activity {
     // ── Экран ─────────────────────────────────────────────────────────
 
     private void render() {
+        Prefs.UsageMode mode = Prefs.usageMode(this);
+        if (!mode.hasHub() && (tab == TAB_GAME || tab == TAB_PANEL)) tab = TAB_STREAM;
+        if (!mode.hasStream() && tab == TAB_STREAM) tab = TAB_GAME;
         Ui.load(this);
         getWindow().getDecorView().setBackground(Ui.screenBackground(this));
         scroll.setBackgroundColor(0);
@@ -167,10 +200,22 @@ public class MainActivity extends Activity {
 
         navigation.removeAllViews();
         navigation.setBackground(Ui.box(this,Ui.BG,Ui.LINE,0));
-        int selected=tab==TAB_GAME?0:tab==TAB_PANEL?1:2;
-        navigation.addView(Ui.segmented(this,new String[]{"Игры","Панель","Настройки"},selected,i->{
-            tab=new int[]{TAB_GAME,TAB_PANEL,TAB_SETTINGS}[i];render();scroll.scrollTo(0,0);
-        }),new LinearLayout.LayoutParams(-1,-2));
+        if (mode == Prefs.UsageMode.STREAM) {
+            TextView action = Ui.button(this, tab == TAB_SETTINGS ? "Вернуться к стриму" : "Настройки", false);
+            action.setOnClickListener(v -> openTab(tab == TAB_SETTINGS ? TAB_STREAM : TAB_SETTINGS));
+            navigation.addView(action, new LinearLayout.LayoutParams(-1, -2));
+        } else {
+            String[] labels = mode.hasStream()
+                    ? new String[]{"Игры", "Панель", "Стрим", "Настройки"}
+                    : new String[]{"Игры", "Панель", "Настройки"};
+            int[] tabs = mode.hasStream()
+                    ? new int[]{TAB_GAME, TAB_PANEL, TAB_STREAM, TAB_SETTINGS}
+                    : new int[]{TAB_GAME, TAB_PANEL, TAB_SETTINGS};
+            int selected = 0;
+            for (int i = 0; i < tabs.length; i++) if (tabs[i] == tab) selected = i;
+            navigation.addView(Ui.segmented(this, labels, selected, i -> openTab(tabs[i])),
+                    new LinearLayout.LayoutParams(-1, -2));
+        }
 
         if (tab == TAB_GAME) renderHub();
         else if (tab == TAB_STREAM) renderStream();
@@ -180,6 +225,51 @@ public class MainActivity extends Activity {
         TextView foot = Ui.text(this, "XPhone " + BuildConfig.VERSION_NAME, 11, Ui.DIM, 500);
         foot.setGravity(Gravity.CENTER);
         content.addView(foot, Ui.lpMargins(this, -1, -2, 0, 24, 0, 0));
+    }
+
+    private void openTab(int destination) {
+        tab = destination;
+        Diagnostics.event(this, "hub.tab " + new String[]{"games", "stream", "panel", "settings"}[tab]);
+        render();
+        scroll.scrollTo(0, 0);
+    }
+
+    private void showFirstRun() {
+        LinearLayout body = card();
+        body.addView(Ui.text(this,
+                "Shizuku открывает расширенные функции игровой панели без root и перепрошивки. "
+                + "Его можно запустить через XPhone на компьютере или, на Android 11 и новее, через беспроводную отладку с самого телефона.\n\n"
+                + "Подойдёт доступная сеть Wi-Fi, в том числе точка доступа второго телефона, если Android разрешает беспроводную отладку в этой сети. "
+                + "Для трансляции экрана на ПК понадобится компьютер с XPhone.",
+                14, Ui.TEXT, 500));
+        showThemedInfo("Расширенные функции", body, "Понятно",
+                () -> { if (canShowUpdate()) showUsageModes(true); }).setCancelable(false);
+    }
+
+    private void showUsageModes(boolean firstRun) {
+        LinearLayout body = card();
+        Prefs.UsageMode selected = Prefs.usageMode(this);
+        body.addView(Ui.text(this, "Режим можно изменить в настройках XPhone.", 13, Ui.MUTED, 600));
+        android.app.Dialog[] dialog = new android.app.Dialog[1];
+        for (Prefs.UsageMode mode : Prefs.UsageMode.values()) {
+            TextView choose = Ui.button(this, mode.title, !firstRun && mode == selected);
+            choose.setOnClickListener(v -> {
+                dialog[0].dismiss();
+                Prefs.setUsageMode(this, mode);
+                if (!mode.hasStream() && (PcLink.waiting() || PcLink.state() == PcLink.State.STREAMING ||
+                        PcLink.state() == PcLink.State.CONNECTING)) PcLink.requestStop();
+                if (!mode.hasHub()) BoostService.stop(this);
+                else if (Prefs.enabled(this) && permissionsOk(this)) BoostService.start(this);
+                probeCompanion();
+                openTab(firstRun || !mode.hasHub() ? (mode.hasHub() ? TAB_GAME : TAB_STREAM) : TAB_SETTINGS);
+                if (firstRun) updates.onResume();
+            });
+            body.addView(choose, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
+            body.addView(Ui.text(this, mode.description, 12, Ui.MUTED, 500),
+                    Ui.lpMargins(this, -1, -2, 0, 4, 0, 0));
+        }
+        dialog[0] = showThemedInfo("Режим использования", body, firstRun ? null : "Закрыть", null);
+        dialog[0].setCancelable(!firstRun);
     }
 
     /** Главная библиотека: запуск игр, профили и состояние игровой панели. */
@@ -246,20 +336,22 @@ public class MainActivity extends Activity {
         showThemedInfo("Не беспокоить",body,"Готово",this::render);
     }
 
-    private void addAppearance() {
-        content.addView(Ui.segmented(this,new String[]{"Графит","Стекло"},Ui.GLASS?1:0,i->{
+    private LinearLayout appearanceControls() {
+        LinearLayout colors=card();
+        colors.addView(Ui.segmented(this,new String[]{"Графит","Стекло"},Ui.GLASS?1:0,i->{
             Ui.setTheme(this,i==1?Ui.THEME_GLASS:Ui.THEME_GRAPHITE);BoostService.refreshAppearance();render();
         }));
-        LinearLayout colors=tacticalCard();
         TextView accent=Ui.button(this,"Цвет акцента · "+AccentColor.text(Ui.ACCENT),false);
-        accent.setOnClickListener(v->AccentPicker.show(this,()->{BoostService.refreshAppearance();render();}));colors.addView(accent);
+        accent.setOnClickListener(v->AccentPicker.show(this,()->{BoostService.refreshAppearance();render();}));
+        colors.addView(accent,Ui.lpMargins(this,-1,-2,0,8,0,0));
         TextView opacity=Ui.text(this,"Плотность панели: "+Prefs.getInt(this,"panel_opacity",35)+"%",12,Ui.SILVER,600);
         colors.addView(opacity,Ui.lpMargins(this,-1,-2,0,14,0,0));
         android.widget.SeekBar slider=new android.widget.SeekBar(this);slider.setMax(75);slider.setProgress(Prefs.getInt(this,"panel_opacity",35)-25);
         slider.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(android.widget.SeekBar b,int value,boolean user){if(user){Prefs.putInt(MainActivity.this,"panel_opacity",value+25);opacity.setText("Плотность панели: "+(value+25)+"%");}}
             public void onStartTrackingTouch(android.widget.SeekBar b){}public void onStopTrackingTouch(android.widget.SeekBar b){BoostService.refreshAppearance();}
-        });colors.addView(slider,Ui.lpMargins(this,-1,-2,0,10,0,0));content.addView(colors,Ui.lpMargins(this,-1,-2,0,12,0,0));
+        });colors.addView(slider,Ui.lpMargins(this,-1,-2,0,10,0,0));
+        return colors;
     }
 
     private LinearLayout tacticalCard() {
@@ -290,6 +382,10 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
+        if (request == AppUpdates.INSTALL_PERMISSION) {
+            if (getPackageManager().canRequestPackageInstalls()) updates.installDownloaded();
+            return;
+        }
         if(request==PICK_AVATAR&&result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();Shell.background(()->{boolean ok=PlayerProfile.importAvatar(this,uri);Shell.onMain(()->{if(ok){if(editingAvatar!=null)PlayerProfile.avatar(this,editingAvatar);render();}else Toast.makeText(this,"Не удалось прочитать изображение",Toast.LENGTH_LONG).show();});});}
     }
 
@@ -359,7 +455,12 @@ public class MainActivity extends Activity {
         content.addView(master, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
         if (!permissionsOk(this)) {
             TextView warn = Ui.text(this, "Нужны разрешения — откройте раздел «Настройки».", 12, Ui.SILVER, 600);
-            warn.setOnClickListener(v -> { tab = TAB_SETTINGS; render(); });
+            warn.setOnClickListener(v -> {
+                expandedMenus.add("Разрешения и Shizuku");
+                tab = TAB_SETTINGS;
+                render();
+                scroll.scrollTo(0, 0);
+            });
             content.addView(warn, Ui.lpMargins(this, -1, -2, 4, 10, 0, 0));
         }
 
@@ -375,11 +476,6 @@ public class MainActivity extends Activity {
             content.addView(warn, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
         }
 
-        if(ScreenFrames.available(this)){section("FPS / ГЦ");LinearLayout fps=card();fps.addView(FpsHud.controls(this,BoostService::refreshHud));content.addView(fps);}
-        if(NativeRecorder.available(this)){section("ЗАПИСЬ ЭКРАНА");LinearLayout recording=card();recording.addView(Overlay.recordingControls(this));content.addView(recording);}
-        section("ТАКТИЧЕСКИЙ / ОФОРМЛЕНИЕ");
-        addAppearance();
-        section("ПАНЕЛЬ В ИГРЕ");
         LinearLayout panel = card();
         panel.addView(plainSwitch("Приветствие при запуске игры", "Короткая анимация у края — вместо сразу открытой панели",
                 Prefs.welcome(this), on -> Prefs.put(this, Prefs.WELCOME, on)));
@@ -402,13 +498,26 @@ public class MainActivity extends Activity {
         TextView test = Ui.button(this, "Как открыть панель в игре", true);
         test.setOnClickListener(v -> Toast.makeText(this,"Откройте игру и дважды нажмите язычок XPhone. В хабе игровые окна скрыты.",Toast.LENGTH_LONG).show());
         panel.addView(test, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
-        content.addView(panel);
+        menuGroup("Запуск панели и язычок", panel);
+        menuGroup("Оформление панели", appearanceControls());
+        LinearLayout hudSettings = card();
+        hudSettings.addView(MiniHud.controls(this, BoostService::refreshHud));
+        menuGroup("Мини-окно и показатели", hudSettings);
+        if (ScreenFrames.available(this)) {
+            LinearLayout fps = card();
+            fps.addView(FpsHud.controls(this, BoostService::refreshHud));
+            menuGroup("Окно FPS и герцовки", fps);
+        }
+        if (OverlayRecording.available()) {
+            LinearLayout recording = card();
+            recording.addView(Overlay.recordingControls(this));
+            menuGroup("Запись экрана", recording);
+        }
         if(Shell.state(this)!=Shell.State.READY) {
             LinearLayout help=card();
             help.addView(shizukuRow(Shell.state(this)));
             content.addView(help,Ui.lpMargins(this,-1,-2,0,12,0,0));
         }
-        section("ПРИЛОЖЕНИЯ ПОВЕРХ ИГРЫ");
         LinearLayout companions=card();
         String windowHelp=CompanionApps.available(this)
                 ? "Выберите до шести приложений. В игре откройте «Окна». Значок приложения сворачивает и возвращает окно; его можно перетащить."
@@ -424,13 +533,8 @@ public class MainActivity extends Activity {
         choose.setOnClickListener(v->showCompanionApps());
         companions.addView(choose,Ui.lpMargins(this,-1,-2,0,12,0,0));
         companions.addView(Ui.hint(this,"Окна экспериментальные: работа и сворачивание зависят от прошивки и приложения. XPhone не включает глобальные режимы и не обходит ограничения телефона.",12,Ui.MUTED,500),Ui.lpMargins(this,-1,-2,0,8,0,0));
-        content.addView(companions);
-        section("ПОКАЗАТЕЛИ В ИГРЕ");
-        LinearLayout hudSettings = card();
-        hudSettings.addView(MiniHud.controls(this, BoostService::refreshHud));
-        content.addView(hudSettings);
+        menuGroup("Приложения поверх игры", companions);
 
-        section("ШАБЛОН НОВЫХ ПРОФИЛЕЙ");
         LinearLayout autos = card();
         int locked = 0, shown = 0;
         for (String id : Booster.TOGGLES) {
@@ -462,16 +566,16 @@ public class MainActivity extends Activity {
             more.setOnClickListener(v -> { tab = TAB_SETTINGS; render(); });
             autos.addView(more, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
         }
-        content.addView(autos);
+        menuGroup("Шаблон игровых профилей", autos);
 
     }
 
     // ── Вкладка «Стрим» ───────────────────────────────────────────────
 
     private void renderStream() {
-        TextView back=Ui.button(this,"← Настройки хаба",false);back.setOnClickListener(v->{tab=TAB_SETTINGS;render();});
-        content.addView(back,Ui.lpMargins(this,-1,-2,0,0,0,12));
         content.addView(pcCard(), Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
+        content.addView(Ui.text(this, "Качество, FPS и громкость трансляции настраиваются в XPhone на компьютере.",
+                13, Ui.MUTED, 500));
     }
 
     /** Связь с XPhone на компьютере: состояние, кнопки, трансляция вместе с игрой. */
@@ -554,37 +658,55 @@ public class MainActivity extends Activity {
         card.addView(Ui.hint(this,lanHelp,12,Ui.MUTED,500),Ui.lpMargins(this,-1,-2,0,6,0,0));
 
 
-        divider(card);
-        card.addView(plainSwitch("Начинать трансляцию вместе с игрой", "Открыли игру — экран сразу на ПК",
-                Prefs.get(this, Prefs.AUTO_STREAM, false), on -> Prefs.put(this, Prefs.AUTO_STREAM, on)));
-        divider(card);
-        card.addView(plainSwitch("Останавливать после игры", "Экономит заряд и трафик",
-                Prefs.get(this, Prefs.AUTO_STREAM_STOP, true), on -> Prefs.put(this, Prefs.AUTO_STREAM_STOP, on)));
+        if (Prefs.usageMode(this).hasHub()) {
+            divider(card);
+            card.addView(plainSwitch("Начинать трансляцию вместе с игрой", "Открыли игру — экран сразу на ПК",
+                    Prefs.get(this, Prefs.AUTO_STREAM, false), on -> Prefs.put(this, Prefs.AUTO_STREAM, on)));
+            divider(card);
+            card.addView(plainSwitch("Останавливать после игры", "Экономит заряд и трафик",
+                    Prefs.get(this, Prefs.AUTO_STREAM_STOP, true), on -> Prefs.put(this, Prefs.AUTO_STREAM_STOP, on)));
+        }
         return card;
     }
 
     // ── Вкладка «Настройки» ───────────────────────────────────────────
 
     private void renderSettings() {
-        section("ОФОРМЛЕНИЕ");addAppearance();
-        TextView overlayButtons=Ui.button(this,"Кнопки оверлея",false);overlayButtons.setOnClickListener(v->showPanelButtons());content.addView(overlayButtons,Ui.lpMargins(this,-1,-2,0,12,0,0));
-        section("ПОДСКАЗКИ");
-        content.addView(plainSwitch("Подсказки и пояснения","Показывать поясняющий текст в хабе и оверлее. Текущие данные показателей доступны всегда",Ui.hintsEnabled(this),enabled->{
+        Prefs.UsageMode mode = Prefs.usageMode(this);
+        TextView usage = Ui.button(this, "Режим использования: " + mode.title, false);
+        usage.setOnClickListener(v -> showUsageModes(false));
+        content.addView(usage, Ui.lpMargins(this, -1, -2, 0, 0, 0, 8));
+        TextView update = Ui.button(this, updates.hasDownload() ? "Установить скачанное обновление" : "Проверить обновления", false);
+        update.setOnClickListener(v -> {
+            if (updates.hasDownload()) updates.installDownloaded();
+            else updates.check(true);
+        });
+        content.addView(update,Ui.lpMargins(this,-1,-2,0,8,0,0));
+        if (mode.hasHub()) {
+            LinearLayout appearance = appearanceControls();
+            TextView overlayButtons=Ui.button(this,"Кнопки оверлея",false);
+            overlayButtons.setOnClickListener(v->showPanelButtons());
+            appearance.addView(overlayButtons,Ui.lpMargins(this,-1,-2,0,8,0,0));
+            menuGroup("Оформление панели", appearance);
+        }
+        LinearLayout preferences = card();
+        preferences.addView(plainSwitch("Подсказки и пояснения","Показывать поясняющий текст в хабе и оверлее. Текущие данные показателей доступны всегда",Ui.hintsEnabled(this),enabled->{
             Prefs.put(this,"show_hints",enabled);BoostService.refreshAppearance();render();
         }));
-        section("ЯЗЫК");
-        TextView language=Ui.button(this,"Язык: Русский",false);language.setOnClickListener(v->{LinearLayout info=card();info.addView(Ui.text(this,"Сейчас доступен русский язык. Другие языки появятся после подготовки переводов.",13,Ui.TEXT,500));showThemedInfo("Язык приложения",info,"Понятно",null);});content.addView(language);
-        section("ИГРОВЫЕ ФУНКЦИИ");
-        if(Prefs.get(this,"privacy_available",false)&&Shell.ready(this))content.addView(plainSwitch("Скрывать уведомления при стриме","На время подключения и стрима скрывает системные баннеры и блокирует шторку. Уведомления сохраняются. Внутриигровые сообщения не скрываются.",Prefs.get(this,"stream_privacy",true),on->{Prefs.put(this,"stream_privacy",on);StreamPrivacy.tick(this);}));
-        if(Booster.isSamsung())content.addView(Ui.text(this,"Автоотключение штатного Game Booster недоступно: Samsung при этом завершает игры. XPhone больше не отключает Game Tools.",12,Ui.MUTED,500),Ui.lpMargins(this,-1,-2,0,8,0,0));
-        section("ДОПОЛНИТЕЛЬНО");
-        LinearLayout pc=tacticalCard();pc.addView(textBlock("Трансляция на компьютер","Дополнительная возможность хаба: экран и звук телефона на ПК"));
-        TextView connect=Ui.button(this,"Открыть подключение к ПК",false);connect.setOnClickListener(v->{tab=TAB_STREAM;render();scroll.scrollTo(0,0);});
-        pc.addView(connect,Ui.lpMargins(this,-1,-2,0,12,0,0));content.addView(pc);
-        section("ЧТО НУЖНО");
+        TextView language=Ui.button(this,"Язык: Русский",false);language.setOnClickListener(v->{LinearLayout info=card();info.addView(Ui.text(this,"Сейчас доступен русский язык. Другие языки появятся после подготовки переводов.",13,Ui.TEXT,500));showThemedInfo("Язык приложения",info,"Понятно",null);});
+        preferences.addView(language,Ui.lpMargins(this,-1,-2,0,8,0,0));
+        if(mode.hasStream() && Prefs.get(this,"privacy_available",false)&&Shell.ready(this)) {
+            divider(preferences);
+            preferences.addView(plainSwitch("Скрывать уведомления при стриме","Скрывает системные баннеры и значки уведомлений. При открытии шторки её содержимое видно на трансляции.",Prefs.get(this,"stream_privacy",true),on->{Prefs.put(this,"stream_privacy",on);StreamPrivacy.tick(this);}));
+            divider(preferences);
+            preferences.addView(plainSwitch("Блокировать шторку при стриме","Действует вместе со скрытием уведомлений.",Prefs.get(this,"stream_lock_shade",false),on->{Prefs.put(this,"stream_lock_shade",on);StreamPrivacy.tick(this);}));
+        }
+        if(mode.hasHub() && Booster.isSamsung())preferences.addView(Ui.text(this,"Автоотключение штатного Game Booster недоступно: Samsung при этом завершает игры. XPhone больше не отключает Game Tools.",12,Ui.MUTED,500),Ui.lpMargins(this,-1,-2,0,8,0,0));
+        menuGroup("Подсказки, язык и приватность", preferences);
         LinearLayout perms = card();
         Shell.State st = Shell.state(this);
         perms.addView(shizukuRow(st));
+        if (mode.hasHub()) {
         divider(perms);
         perms.addView(statusRow("Поверх других приложений", "Чтобы показывать язычок и панель", overlayOk(this),
                 () -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())))));
@@ -596,6 +718,8 @@ public class MainActivity extends Activity {
             perms.addView(statusRow("Уведомления", "Значок «XPhone следит за играми»", notifOk(this),
                     () -> requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2)));
         }
+        }
+        if (mode.hasStream()) {
         divider(perms);
         boolean wifiOk = Booster.canWriteSecure(this) || st == Shell.State.READY;
         perms.addView(statusRow("Сам включать «Отладку по Wi-Fi»",
@@ -605,19 +729,19 @@ public class MainActivity extends Activity {
                     if (st == Shell.State.READY) grantAllViaShizuku();
                     else Toast.makeText(this, "Подключите телефон кабелем к компьютеру с открытым XPhone — разрешение выдастся само.", Toast.LENGTH_LONG).show();
                 }));
-        if (st != Shell.State.READY) {
+        }
+        if (mode.hasHub() && st != Shell.State.READY) {
             divider(perms);
             perms.addView(statusRow("«Не беспокоить» без Shizuku", "Доступ к режиму «Не беспокоить»", Booster.dndAccess(this),
                     () -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))));
         }
-        if (st == Shell.State.READY && !(overlayOk(this) && usageOk(this) && notifOk(this) && Booster.canWriteSecure(this))) {
+        if (mode.hasHub() && st == Shell.State.READY && !(overlayOk(this) && usageOk(this) && notifOk(this) && Booster.canWriteSecure(this))) {
             TextView all = Ui.button(this, "Выдать всё через Shizuku", true);
             all.setOnClickListener(v -> grantAllViaShizuku());
             perms.addView(all, Ui.lpMargins(this, -1, -2, 0, 14, 0, 0));
         }
-        content.addView(perms);
+        menuGroup("Разрешения и Shizuku", perms);
 
-        section("ПОДДЕРЖКА И СВЯЗЬ");
         LinearLayout support=card();
         support.addView(Ui.hint(this,"Если XPhone оказался полезен, можно угостить разработчика кофе. Поддержка добровольная и не влияет на доступность функций.",13,Ui.MUTED,500));
         String donatePayUrl="https://donatepay.ru/don/unholyhyde";
@@ -632,7 +756,15 @@ public class MainActivity extends Activity {
         TextView issues=Ui.button(this,"GitHub Issues — ошибки и предложения",false);
         issues.setOnClickListener(v->openExternalLink("https://github.com/UnholyHyde/XPhone/issues"));
         support.addView(issues,Ui.lpMargins(this,-1,-2,0,8,0,0));
-        content.addView(support);
+        TextView diagnostics = Ui.button(this, "Журнал диагностики", false);
+        diagnostics.setOnClickListener(v -> showThemedPrompt("Журнал диагностики",
+                "В файле будут версия XPhone, модель телефона, версия Android и технические события. Журнал хранится на телефоне и отправляется только через выбранное вами приложение.",
+                "Закрыть", "Поделиться", () -> Diagnostics.share(this)));
+        support.addView(diagnostics, Ui.lpMargins(this,-1,-2,0,8,0,0));
+        TextView capabilities = Ui.button(this, "Проверить возможности телефона", false);
+        capabilities.setOnClickListener(v -> showCapabilitiesOptions());
+        support.addView(capabilities, Ui.lpMargins(this,-1,-2,0,8,0,0));
+        menuGroup("Поддержка и связь", support);
 
         TextView credits = Ui.text(this, "Иконки Lucide (ISC), шрифты Manrope и Unbounded (OFL), Shizuku API (Apache 2.0)", 11, Ui.DIM, 500);
         credits.setGravity(Gravity.CENTER);
@@ -642,6 +774,27 @@ public class MainActivity extends Activity {
     // ── Общие элементы ────────────────────────────────────────────────
 
     private LinearLayout card() { return Ui.card(this); }
+
+    private final java.util.Set<String> expandedMenus = new java.util.HashSet<>();
+
+    private void menuGroup(String title, LinearLayout body) {
+        TextView button = Ui.button(this, title, false);
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        button.setMinHeight(Ui.dp(this, 48));
+        Runnable refresh = () -> {
+            boolean expanded = expandedMenus.contains(title);
+            button.setText((expanded ? "−  " : "+  ") + title);
+            button.setContentDescription(title + (expanded ? ", раскрыто" : ", свёрнуто"));
+            body.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        };
+        button.setOnClickListener(v -> {
+            if (!expandedMenus.add(title)) expandedMenus.remove(title);
+            refresh.run();
+        });
+        content.addView(button, Ui.lpMargins(this, -1, -2, 0, 8, 0, 0));
+        content.addView(body, Ui.lpMargins(this, -1, -2, 0, 4, 0, 0));
+        refresh.run();
+    }
 
     private void section(String title) {
         content.addView(Ui.text(this, Ui.GLASS ? title.charAt(0) + title.substring(1).toLowerCase() : title,
@@ -666,14 +819,28 @@ public class MainActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.addView(textBlock(title, sub), new LinearLayout.LayoutParams(0, -2, 1));
-        Ui.Toggle t = new Ui.Toggle(this);
-        t.setOn(on);
-        t.setListener(l);
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(Ui.dp(this, Ui.GLASS ? 48 : 44), Ui.dp(this, Ui.GLASS ? 28 : 26));
+        TextView t = Ui.button(this, "", false);
+        t.setMinHeight(Ui.dp(this, 48));
+        t.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        setOptionState(t, title, on);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(-2, -2);
         tl.leftMargin = Ui.dp(this, 12);
         row.addView(t, tl);
+        t.setOnClickListener(v -> {
+            boolean next = !t.isSelected();
+            setOptionState(t, title, next);
+            l.changed(next);
+        });
         row.setOnClickListener(v -> t.performClick());
         return row;
+    }
+
+    private void setOptionState(TextView button, String title, boolean on) {
+        button.setSelected(on);
+        button.setText(on ? "Вкл" : "Выкл");
+        button.setContentDescription(title + (on ? ", включено. Выключить" : ", выключено. Включить"));
+        button.setTextColor(on ? Ui.ON_ACCENT : Ui.TEXT);
+        button.setBackground(Ui.box(this, on ? Ui.ACCENT : Ui.FIELD, on ? Ui.ACCENT : Ui.LINE2, Ui.R_BUTTON));
     }
 
     private LinearLayout statusRow(String title, String sub, boolean ok, Runnable fix) {
@@ -707,11 +874,8 @@ public class MainActivity extends Activity {
                 break;
             case NOT_RUNNING:
                 sub = "Не запущен. Откройте Shizuku → «Запустить» (через отладку по Wi-Fi). Или подключите телефон к XPhone на ПК — он запустит Shizuku сам.";
-                btn = "Открыть";
-                act = () -> {
-                    Intent i = getPackageManager().getLaunchIntentForPackage(Shell.SHIZUKU_PKG);
-                    if (i != null) startActivity(i);
-                };
+                btn = "Запустить";
+                act = this::showShizukuStart;
                 break;
             default:
                 sub = "Для расширенных функций установите Shizuku. Базовая панель работает и без него.";
@@ -732,6 +896,85 @@ public class MainActivity extends Activity {
             row.addView(b);
         }
         return row;
+    }
+
+    private void showShizukuStart() {
+        LinearLayout body = card();
+        body.addView(Ui.text(this, "После перезагрузки телефона Shizuku нужно запустить снова. Он также может останавливаться при отключении отладки или ограничении фоновой работы.", 13, Ui.TEXT, 500));
+        TextView pc = Ui.button(this, "Запустить через XPhone на ПК", true);
+        pc.setOnClickListener(v -> {
+            Diagnostics.event(this, "shizuku.start.pc");
+            if (PcLink.state() == PcLink.State.NO_PC) {
+                showThemedMessage("Подключите компьютер", "Откройте XPhone на ПК и подключите телефон по USB с разрешённой отладкой. Затем повторите запуск. Для кнопки запуска нужна обновлённая версия XPhone на ПК.");
+                return;
+            }
+            PcLink.requestShizuku();
+            Toast.makeText(this, "Запрос отправлен. После запуска состояние Shizuku обновится.", Toast.LENGTH_LONG).show();
+        });
+        body.addView(pc, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
+        TextView wireless = Ui.button(this, "Запустить без компьютера", false);
+        wireless.setOnClickListener(v -> showShizukuWirelessStep(1));
+        body.addView(wireless, Ui.lpMargins(this, -1, -2, 0, 8, 0, 0));
+        TextView battery = Ui.button(this, "Фоновая работа Shizuku", false);
+        battery.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + Shell.SHIZUKU_PKG))));
+        body.addView(battery, Ui.lpMargins(this, -1, -2, 0, 8, 0, 0));
+        body.addView(Ui.text(this, "В настройках Shizuku откройте «Батарея» и разрешите фоновую работу. Оставляйте включёнными параметры разработчика и отладку USB.", 12, Ui.MUTED, 500),
+                Ui.lpMargins(this, -1, -2, 0, 8, 0, 0));
+        showThemedInfo("Запустить Shizuku", body, "Закрыть", null);
+    }
+
+    private void showShizukuWirelessStep(int step) {
+        Shell.State state = Shell.state(this);
+        if (state == Shell.State.READY) {
+            showThemedMessage("Shizuku работает", "Расширенные функции доступны. Вернитесь в игру и заново откройте панель.");
+            return;
+        }
+        if (state == Shell.State.NO_PERMISSION) {
+            showThemedPrompt("Разрешите доступ XPhone", "Shizuku запущен. Подтвердите разрешение для XPhone в следующем окне.", "Позже", "Разрешить", Shell::requestPermission);
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 30) {
+            showThemedMessage("Запуск Shizuku", "Запуск без компьютера через беспроводную отладку доступен начиная с Android 11. На этом устройстве используйте запуск через ПК или root.");
+            return;
+        }
+        if (step == 1) {
+            showThemedPrompt("1. Включите беспроводную отладку",
+                    "Shizuku даёт XPhone доступ к расширенным настройкам телефона. После перезагрузки его нужно запустить снова.\n\nПодключитесь к сети Wi-Fi. Откройте «Беспроводная отладка» и включите её, затем вернитесь в XPhone. Раздачу интернета включать не требуется. Если откроется общий раздел «Для разработчиков», найдите в нём беспроводную отладку.",
+                    "Позже", "Открыть настройки", () -> {
+                        Intent settings = new Intent("android.settings.WIRELESS_DEBUGGING_SETTINGS");
+                        try {
+                            Prefs.putInt(this, "shizuku_setup_step", 2);
+                            startActivity(settings);
+                        } catch (android.content.ActivityNotFoundException | SecurityException error) {
+                            try { startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)); }
+                            catch (android.content.ActivityNotFoundException | SecurityException fallback) {
+                                Prefs.putInt(this, "shizuku_setup_step", 0);
+                                showThemedMessage("Откройте настройки вручную", "Включите параметры разработчика, затем найдите «Беспроводная отладка». После этого снова нажмите «Запустить без компьютера».");
+                            }
+                        }
+                    });
+            return;
+        }
+        if (step == 2) {
+            showThemedPrompt("2. Запустите Shizuku",
+                    "В Shizuku найдите «Запуск через беспроводную отладку» и нажмите «Запустить». Если запрашивается сопряжение, выполните его по инструкции Shizuku с кодом из настроек Android. Затем вернитесь в XPhone — мы проверим результат.",
+                    "Позже", "Открыть Shizuku", () -> {
+                        Intent intent = getPackageManager().getLaunchIntentForPackage(Shell.SHIZUKU_PKG);
+                        if (intent == null) { showShizukuHelp(); return; }
+                        try {
+                            Prefs.putInt(this, "shizuku_setup_step", 3);
+                            startActivity(intent);
+                        } catch (RuntimeException error) {
+                            Prefs.putInt(this, "shizuku_setup_step", 0);
+                            showThemedMessage("Не удалось открыть Shizuku", "Откройте Shizuku через значок приложения и выполните запуск по Wi-Fi.");
+                        }
+                    });
+            return;
+        }
+        showThemedPrompt("Shizuku пока не запущен",
+                "Проверьте подключение к Wi-Fi и беспроводную отладку. В Shizuku нажмите «Запустить» и дождитесь сообщения об успешном запуске.",
+                "Закрыть", "Проверить настройки", () -> showShizukuWirelessStep(1));
     }
 
     private void showCompanionApps() {
@@ -780,15 +1023,85 @@ public class MainActivity extends Activity {
     }
 
     /** Собственное оформление без системной шапки и серой рамки AlertDialog. */
-    private android.app.Dialog showThemedInfo(String heading, LinearLayout body, String closeLabel, Runnable after) {
+    private void showCapabilitiesOptions() {
+        if (!PhoneCapabilities.file(this).isFile()) {
+            confirmCapabilitiesScan();
+            return;
+        }
+        showThemedPrompt(PhoneCapabilities.TITLE, "Отчёт сохранён на телефоне. Его можно открыть или провести проверку заново.",
+                "Закрыть", "Открыть отчёт", () -> {
+                    try { showCapabilitiesReport(PhoneCapabilities.read(this)); }
+                    catch (java.io.IOException error) { confirmCapabilitiesScan(); }
+                });
+    }
+
+    private void confirmCapabilitiesScan() {
+        showThemedPrompt("Проверить возможности телефона",
+                "Это добровольная проверка для улучшения совместимости XPhone. В отчёт попадут модель, версии Android и прошивки, параметры экрана, типы датчиков и список возможностей, которые объявляет прошивка. Через Shizuku XPhone также прочитает имена системных служб.\n\n"
+                + "Сообщения, фотографии, аккаунты, серийный номер и список приложений в отчёт не попадут. Во время проверки возможны краткие подтормаживания. "
+                + "Текстовый файл останется на телефоне. Вы сможете прочитать его и сами решить, отправлять ли разработчику.",
+                "Отмена", "Начать проверку", () -> {
+                    Shell.State state = Shell.state(this);
+                    if (state != Shell.State.READY) {
+                        LinearLayout body = card();
+                        body.addView(Ui.text(this, "Для проверки нужен запущенный Shizuku и разрешение для XPhone. После подключения снова нажмите «Проверить возможности телефона».", 13, Ui.TEXT, 500));
+                        divider(body);
+                        body.addView(shizukuRow(state));
+                        showThemedInfo("Подключите Shizuku", body, "Закрыть", null);
+                    } else {
+                        boolean started = PhoneCapabilities.scan(this);
+                        Toast.makeText(this, started ? "Проверяем возможности телефона…" : "Проверка уже идёт.",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    void showCapabilitiesReport(String report) {
+        LinearLayout body = card();
+        TextView share = Ui.button(this, "Поделиться файлом", true);
+        share.setOnClickListener(v -> Diagnostics.shareTextFile(this, PhoneCapabilities.SHARE_PATH, "Поделиться характеристиками"));
+        body.addView(share);
+        TextView rescan = Ui.button(this, "Проверить снова", false);
+        body.addView(rescan, Ui.lpMargins(this, -1, -2, 0, 8, 0, 0));
+        TextView text = Ui.text(this, report, 13, Ui.TEXT, 500);
+        text.setTextIsSelectable(true);
+        body.addView(text, Ui.lpMargins(this, -1, -2, 0, 12, 0, 0));
+        android.app.Dialog dialog = showThemedInfo(PhoneCapabilities.TITLE, body, "Закрыть", null);
+        rescan.setOnClickListener(v -> {
+            dialog.dismiss();
+            confirmCapabilitiesScan();
+        });
+    }
+
+    void showThemedPrompt(String title, String message, String close, String action, Runnable onAction) {
+        LinearLayout body = card();
+        body.addView(Ui.text(this, message, 14, Ui.TEXT, 500));
+        TextView primary = Ui.button(this, action, true);
+        body.addView(primary, Ui.lpMargins(this, -1, -2, 0, 16, 0, 0));
+        android.app.Dialog dialog = showThemedInfo(title, body, close, null);
+        primary.setOnClickListener(v -> {
+            dialog.dismiss();
+            onAction.run();
+        });
+    }
+
+    void showThemedMessage(String title, String message) {
+        LinearLayout body = card();
+        body.addView(Ui.text(this, message, 14, Ui.TEXT, 500));
+        showThemedInfo(title, body, "Понятно", null);
+    }
+
+    android.app.Dialog showThemedInfo(String heading, LinearLayout body, String closeLabel, Runnable after) {
         android.app.Dialog dialog=new android.app.Dialog(this);
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        body.setBackground(Ui.box(this,0xFF17191F,Ui.LINE2,Ui.R_CARD));
+        body.setBackground(Ui.box(this,Ui.GLASS ? 0xFF171C25 : Ui.CARD,Ui.LINE2,Ui.R_CARD));
         TextView title=Ui.text(this,heading,18,Ui.TEXT,800);
         body.addView(title,0,Ui.lpMargins(this,-1,-2,0,0,0,16));
-        TextView close=Ui.button(this,closeLabel,false);
-        close.setOnClickListener(v->dialog.dismiss());
-        body.addView(close,Ui.lpMargins(this,-1,-2,0,14,0,0));
+        if (closeLabel != null) {
+            TextView close=Ui.button(this,closeLabel,false);
+            close.setOnClickListener(v->dialog.dismiss());
+            body.addView(close,Ui.lpMargins(this,-1,-2,0,14,0,0));
+        }
         ScrollView sc=new ScrollView(this);
         sc.setVerticalScrollBarEnabled(false);
         sc.addView(body);

@@ -46,6 +46,8 @@
                     </StackPanel>
                 </Border>
 
+                <Button x:Name="UpdateButton" DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Updates_Click"
+                        Margin="8,0,0,0" Content="Обновления" />
                 <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Support_Click" Margin="8,0,0,0"
                         Content="Поддержка" ToolTip="Поддержать разработку, Telegram и GitHub Issues" />
                 <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" Click="Check_Click" AutomationProperties.Name="Проверка телефона"
@@ -147,6 +149,19 @@
                                 </ui:Icon>
                                 <TextBlock Text="{Binding AudioLive}" FontSize="12" Foreground="{StaticResource Silver}" VerticalAlignment="Center" />
                             </StackPanel>
+                            <Grid Margin="0,8,0,0" Visibility="{Binding ShowAudioLive, Converter={StaticResource Vis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="42" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Громкость" Style="{StaticResource Note}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource Range}" Minimum="0" Maximum="100"
+                                        Value="{Binding StreamVolume, Mode=TwoWay}" TickFrequency="1" IsSnapToTickEnabled="True"
+                                        AutomationProperties.Name="Громкость трансляции" ToolTip="Громкость трансляции на компьютере" />
+                                <TextBlock Grid.Column="2" Text="{Binding StreamVolume, StringFormat={}{0}%}"
+                                           Style="{StaticResource Note}" VerticalAlignment="Center" TextAlignment="Right" />
+                            </Grid>
                         </StackPanel>
 
                         <!-- Сообщение об ошибке / подсказка -->
@@ -268,6 +283,7 @@
                         <StackPanel>
                             <TextBlock Text="Качество" Style="{StaticResource Label}" />
                             <ComboBox Style="{StaticResource Select}" SelectedValuePath="Tag" SelectedValue="{Binding Quality}">
+                                <ComboBoxItem Content="Как на телефоне" Tag="{x:Static s:QualityMode.Phone}" />
                                 <ComboBoxItem Content="720p" Tag="{x:Static s:QualityMode.P720}" />
                                 <ComboBoxItem Content="1080p" Tag="{x:Static s:QualityMode.P1080}" />
                                 <ComboBoxItem Content="Своё значение" Tag="{x:Static s:QualityMode.Custom}" />
@@ -356,6 +372,12 @@
                     <CheckBox Style="{StaticResource Check}" IsChecked="{Binding StayAwake}" Content="Не давать телефону засыпать" />
                     <CheckBox Style="{StaticResource Check}" IsChecked="{Binding Borderless}" Content="Окно без рамки (удобно для OBS)" />
                     <CheckBox Style="{StaticResource Check}" IsChecked="{Binding AlwaysOnTop}" Content="Окно поверх всех" />
+                    <TextBlock Text="Фон вокруг экрана телефона" Style="{StaticResource Label}" Margin="0,6,0,6" />
+                    <WrapPanel>
+                        <Button Style="{StaticResource BtnSm}" Content="Выбрать фон" Click="ChooseBackdrop_Click" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource BtnSm}" Content="Сбросить" Click="ClearBackdrop_Click" />
+                    </WrapPanel>
+                    <TextBlock Text="{Binding BackdropName}" Style="{StaticResource Note}" Margin="0,6,0,8" />
 
                     <TextBlock Text="Название окна (по нему OBS находит окно)" Style="{StaticResource Label}" Margin="0,6,0,6" />
                     <TextBox Style="{StaticResource Input}" MaxLength="80" Text="{Binding WindowTitle, UpdateSourceTrigger=LostFocus}"

@@ -14,9 +14,9 @@ public static class ScrcpyArgs
     /// <summary>Длинная сторона картинки для выбранного качества (scrcpy ограничивает именно её).</summary>
     public static int MaxSize(PhoneDevice d, PhoneProfile p)
     {
+        if (p.Quality == QualityMode.Phone) return 0;
         int lines = p.Lines;
         double aspect = d.ScreenShort > 0 ? (double)d.ScreenLong / d.ScreenShort : DefaultAspect;
-        if (d.ScreenShort > 0 && lines >= d.ScreenShort) return 0; // не больше, чем у телефона
         int max = (int)Math.Round(lines * aspect / 8.0) * 8;
         return Math.Max(max, 320);
     }
@@ -25,7 +25,7 @@ public static class ScrcpyArgs
     public static int AutoBitrateMbps(PhoneDevice? d, PhoneProfile p)
     {
         double aspect = d is { ScreenShort: > 0 } ? (double)d.ScreenLong / d.ScreenShort : DefaultAspect;
-        int lines = d is { ScreenShort: > 0 } ? Math.Min(p.Lines, d.ScreenShort) : p.Lines;
+        int lines = EffectiveLines(d, p);
         double px = lines * lines * aspect;
         double mbps = px * p.Fps * 0.08 / 1_000_000.0;
         return (int)Math.Clamp(Math.Round(mbps), 4, 40);
@@ -80,6 +80,7 @@ public static class ScrcpyArgs
             if (d.IsNetwork)
                 a.Add("--screen-off-timeout=" + (24 * 3600).ToString(CultureInfo.InvariantCulture));
         }
+        a.Add("--no-window-aspect-ratio-lock");
         if (p.Borderless) a.Add("--window-borderless");
         if (p.AlwaysOnTop) a.Add("--always-on-top");
         var title = string.IsNullOrWhiteSpace(p.WindowTitle) ? "XPhone" : p.WindowTitle.Trim();
@@ -90,15 +91,22 @@ public static class ScrcpyArgs
         return a;
     }
 
-    /// <summary>Реальная высота картинки: не больше, чем отдаёт сам телефон.</summary>
-    public static int EffectiveLines(PhoneDevice? d, PhoneProfile p) =>
-        d is { ScreenShort: > 0 } ? Math.Min(p.Lines, d.ScreenShort) : p.Lines;
+    /// <summary>Оценка короткой стороны кадра до запуска трансляции.</summary>
+    public static int EffectiveLines(PhoneDevice? d, PhoneProfile p)
+    {
+        if (p.Quality == QualityMode.Phone)
+            return d is { ScreenShort: > 0 } ? d.ScreenShort : 1080;
+        return d is { ScreenShort: > 0 } ? Math.Min(p.Lines, d.ScreenShort) : p.Lines;
+    }
 
     /// <summary>Телефон отдаёт меньше, чем выбрано (например, на Samsung выбрано разрешение экрана HD+).</summary>
     public static bool PhoneLimitsQuality(PhoneDevice? d, PhoneProfile p) =>
-        d is { ScreenShort: > 0 } && d.ScreenShort < p.Lines;
+        p.Quality != QualityMode.Phone && d is { ScreenShort: > 0 } && d.ScreenShort < p.Lines;
 
     /// <summary>Короткое описание для строки состояния: «1080p · 60 FPS · 12 Мбит/с».</summary>
-    public static string Describe(PhoneDevice? d, PhoneProfile p) =>
-        $"{EffectiveLines(d, p)}p · {p.Fps} FPS · {BitrateMbps(d, p)} Мбит/с";
+    public static string Describe(PhoneDevice? d, PhoneProfile p, string? resolution = null)
+    {
+        string quality = resolution ?? (p.Quality == QualityMode.Phone ? "Как на телефоне" : $"{EffectiveLines(d, p)}p");
+        return $"{quality} · {p.Fps} FPS · {BitrateMbps(d, p)} Мбит/с";
+    }
 }

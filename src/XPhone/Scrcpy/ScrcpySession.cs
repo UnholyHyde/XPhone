@@ -12,6 +12,13 @@ public sealed class ScrcpySession
     private readonly StringBuilder _log = new();
     private Process? _process;
     private volatile bool _stopRequested;
+    private int _frameChanges;
+    private string? _textureSize;
+    internal string? VideoResolution => Volatile.Read(ref _textureSize);
+    private double _videoAspect;
+    internal double VideoAspect => Volatile.Read(ref _videoAspect);
+    internal string Title => Args.FirstOrDefault(arg => arg.StartsWith("--window-title=", StringComparison.Ordinal))?[15..]
+                             ?? "XPhone — экран телефона";
 
     public PhoneDevice Device { get; }
     public IReadOnlyList<string> Args { get; private set; }
@@ -27,6 +34,7 @@ public sealed class ScrcpySession
     public event Action<ScrcpySession>? Exited;
     /// <summary>Новая строка журнала.</summary>
     public event Action<ScrcpySession, string>? LogLine;
+    internal event Action<ScrcpySession>? VideoResolutionChanged;
 
     public ScrcpySession(AdbClient adb, PhoneDevice device, IReadOnlyList<string> args)
     {
@@ -39,11 +47,38 @@ public sealed class ScrcpySession
 
     private void Append(string line)
     {
+        bool resolutionChanged = false;
         lock (_log)
         {
+            const string texture = "INFO: Texture: ";
+            const string hardwareTexture = "INFO: Texture (D3D11VA): ";
+            if (line.StartsWith(texture, StringComparison.Ordinal) ||
+                line.StartsWith(hardwareTexture, StringComparison.Ordinal))
+            {
+                var size = line[(line.LastIndexOf(':') + 1)..].Trim();
+                var split = size.IndexOf('x');
+                if (split > 0 && int.TryParse(size.AsSpan(0, split), out var width) &&
+                    int.TryParse(size.AsSpan(split + 1), out var height) && width > 0 && height > 0)
+                {
+                    Volatile.Write(ref _videoAspect, (double)width / height);
+                    var resolution = $"{width} × {height}";
+                    if (_textureSize != resolution)
+                    {
+                        if (_textureSize != null) Interlocked.Increment(ref _frameChanges);
+                        Volatile.Write(ref _textureSize, resolution);
+                        resolutionChanged = true;
+                    }
+                }
+            }
+            else if (line.StartsWith("INFO: Display orientation set to ", StringComparison.Ordinal))
+            {
+                if (VideoAspect > 0) Volatile.Write(ref _videoAspect, 1 / VideoAspect);
+                Interlocked.Increment(ref _frameChanges);
+            }
             _log.AppendLine(line);
             if (_log.Length > 200_000) _log.Remove(0, _log.Length - 150_000);
         }
+        if (resolutionChanged) VideoResolutionChanged?.Invoke(this);
         LogLine?.Invoke(this, line);
     }
 
@@ -111,20 +146,64 @@ public sealed class ScrcpySession
                     (Math.Abs(now.Left - r.Left) > 3 || Math.Abs(now.Top - r.Top) > 3))
                     Win32.MoveClientTo(h, r.Left, r.Top);
                 WindowShown?.Invoke(this);
+                await PreserveWindowSizeAsync(h);
                 return;
             }
             await Task.Delay(200);
         }
     }
 
+    private async Task PreserveWindowSizeAsync(IntPtr hwnd)
+    {
+        var saved = Win32.GetNormalWindowRect(hwnd);
+        Win32.RECT? candidate = saved;
+        long changedAt = Environment.TickCount64;
+        int frameChanges = Volatile.Read(ref _frameChanges);
+        bool restore = false;
+        while (!HasExited && !StopRequested && !IsHosted)
+        {
+            await Task.Delay(100).ConfigureAwait(false);
+            if (HasExited || StopRequested || IsHosted) break;
+            var count = Volatile.Read(ref _frameChanges);
+            if (count != frameChanges)
+            {
+                frameChanges = count;
+                restore = saved.HasValue;
+            }
+            if (Win32.GetNormalWindowRect(hwnd) is not { } current) continue;
+            if (restore && saved is { } rect)
+            {
+                if (current.Equals(rect) || Win32.RestoreWindowRect(hwnd, rect))
+                {
+                    restore = false;
+                    candidate = rect;
+                    changedAt = Environment.TickCount64;
+                }
+                continue;
+            }
+            // Уменьшение окна приходит чуть раньше строки журнала о новом кадре.
+            if (!current.Equals(candidate))
+            {
+                candidate = current;
+                changedAt = Environment.TickCount64;
+            }
+            else if (Environment.TickCount64 - changedAt >= 350)
+                saved = current;
+        }
+    }
+
     /// <summary>Где сейчас картинка окна (для перезапуска на том же месте).</summary>
-    public Win32.RECT? CurrentRect() => Win32.GetClientArea(Window);
+    private IntPtr _hostWindow;
+    internal void SetHostWindow(IntPtr hwnd) => Interlocked.Exchange(ref _hostWindow, hwnd);
+    private bool IsHosted => Volatile.Read(ref _hostWindow) != IntPtr.Zero;
+    public Win32.RECT? CurrentRect() => Win32.GetClientArea(IsHosted ? Volatile.Read(ref _hostWindow) : Window);
 
     public void BringToFront()
     {
-        if (Window == IntPtr.Zero) return;
-        if (Win32.IsIconic(Window)) Win32.ShowWindow(Window, 9); // SW_RESTORE
-        Win32.SetForegroundWindow(Window);
+        var hwnd = IsHosted ? Volatile.Read(ref _hostWindow) : Window;
+        if (hwnd == IntPtr.Zero) return;
+        if (Win32.IsIconic(hwnd)) Win32.ShowWindow(hwnd, 9); // SW_RESTORE
+        Win32.SetForegroundWindow(hwnd);
     }
 
     /// <summary>Закрыть аккуратно (как крестиком), а если не закрылся — завершить.</summary>

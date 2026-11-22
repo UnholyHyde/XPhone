@@ -12,12 +12,13 @@ final class PanelFeatures {
     static boolean selected(Context c, String id) { return Prefs.get(c, "panel_tile_"+id, true); }
     static boolean available(Context c, String id) {
         switch(id) {
-            case "stream": case "hud": return true;
+            case "stream": return Prefs.usageMode(c).hasStream();
+            case "hud": return true;
             case "fps":return ScreenFrames.available(c);
             case "sensitivity":return TouchSensitivity.available(c);
             case "apps": return CompanionApps.available(c);
             case "res": return Shell.ready(c)&&!DisplayResolution.modes(c).isEmpty();
-            case "record": return NativeRecorder.available(c);
+            case "record": return OverlayRecording.available();
             case "touch": return TouchTrace.available(c);
             case "mic": return Mic.supported(c);
             default: return Booster.supported(id) && Booster.available(c,id);

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace XPhone.Settings;
 
-public enum QualityMode { P720, P1080, Custom }
+public enum QualityMode { P720, P1080, Custom, Phone }
 public enum AudioMode { PcOnly, Both, Off }
 
 /// <summary>Настройки трансляции. У каждого телефона — свой профиль.</summary>
@@ -40,6 +40,8 @@ public sealed class AppSettings
     public bool FirstRunDone { get; set; }
     public bool RememberPhone { get; set; } = true;
     public bool AutoConnect { get; set; }
+    public int StreamVolume { get; set; } = 100;
+    public string? StreamBackdrop { get; set; }
     /// <summary>Серийный номер запомненного телефона (одинаков для USB и Wi-Fi).</summary>
     public string? RememberedPhone { get; set; }
     public string? RememberedPhoneName { get; set; }

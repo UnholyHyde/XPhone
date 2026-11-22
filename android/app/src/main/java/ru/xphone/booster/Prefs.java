@@ -42,7 +42,31 @@ public final class Prefs {
     public static boolean get(Context c, String key, boolean def) { return sp(c).getBoolean(key, def); }
     public static void put(Context c, String key, boolean v) { sp(c).edit().putBoolean(key, v).apply(); }
 
-    public static boolean enabled(Context c) { return get(c, ENABLED, true); }
+    enum UsageMode {
+        HUB("Мобильный хаб", "Игры, профили и игровая панель."),
+        STREAM("Только стрим", "Экран и звук телефона на ПК, управление трансляцией."),
+        BOTH("Хаб и стрим", "Игровой хаб и трансляция на компьютер.");
+
+        final String title, description;
+        UsageMode(String title, String description) {
+            this.title = title;
+            this.description = description;
+        }
+
+        boolean hasHub() { return this != STREAM; }
+        boolean hasStream() { return this != HUB; }
+    }
+
+    static boolean modeChosen(Context c) { return sp(c).contains("usage_mode"); }
+    static UsageMode usageMode(Context c) {
+        try { return UsageMode.valueOf(sp(c).getString("usage_mode", UsageMode.BOTH.name())); }
+        catch (IllegalArgumentException error) { return UsageMode.BOTH; }
+    }
+    static void setUsageMode(Context c, UsageMode mode) {
+        sp(c).edit().putString("usage_mode", mode.name()).apply();
+    }
+
+    public static boolean enabled(Context c) { return usageMode(c).hasHub() && get(c, ENABLED, true); }
     public static boolean autoPanel(Context c) { return get(c, AUTO_PANEL, false); }
     public static boolean welcome(Context c) { return get(c, WELCOME, true); }
     public static int handleEdge(Context c){int edge=getInt(c,"handle_edge",handleLeft(c)?0:1);return edge>=0&&edge<=3?edge:1;}

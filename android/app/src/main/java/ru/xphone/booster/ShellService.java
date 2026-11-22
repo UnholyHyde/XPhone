@@ -14,7 +14,7 @@ public class ShellService extends IShellService.Stub {
     private final StreamPrivacyBridge privacy=new StreamPrivacyBridge();
     private int privacyUser;
     @Override public boolean privacyAvailable(){return privacy.available();}
-    @Override public String streamPrivacy(boolean active,int user){privacyUser=user;return privacy.set(active,user);}
+    @Override public String streamPrivacy(boolean active,int user,boolean lockShade){privacyUser=user;return privacy.set(active,user,lockShade);}
     private final ScreenRecording recording=new ScreenRecording();
     @Override public String startRecord(String name,int mbps){return recording.start(name,mbps);}
     @Override public String stopRecord(){return recording.stop();}
@@ -36,7 +36,7 @@ public class ShellService extends IShellService.Stub {
 
     @Override
     public void destroy() {
-        privacy.set(false,privacyUser);touches.stop();recording.stop();
+        privacy.set(false,privacyUser,false);touches.stop();recording.stop();
         windows.end();
         System.exit(0);
     }

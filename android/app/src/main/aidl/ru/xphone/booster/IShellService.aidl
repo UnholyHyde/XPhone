@@ -21,6 +21,6 @@ interface IShellService {
     String recordState() = 12;
     String restartApp(String component,int userId) = 13;
     boolean privacyAvailable() = 14;
-    String streamPrivacy(boolean active,int userId) = 15;
+    String streamPrivacy(boolean active,int userId,boolean lockShade) = 15;
     String resumeGame(String component,int userId) = 16;
 }

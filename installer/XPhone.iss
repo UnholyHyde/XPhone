@@ -11,7 +11,7 @@ DefaultGroupName=XPhone
 DisableProgramGroupPage=yes
 DisableDirPage=no
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequiredOverridesAllowed=dialog commandline
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
@@ -35,3 +35,10 @@ Name: "{group}\XPhone"; Filename: "{app}\XPhone.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\XPhone"; Filename: "{app}\XPhone.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 [Run]
 Filename: "{app}\XPhone.exe"; Description: "Открыть XPhone"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\XPhone.exe"; WorkingDir: "{app}"; Flags: nowait skipifnotsilent runasoriginaluser; Check: IsXPhoneUpdate
+
+[Code]
+function IsXPhoneUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:XPHONEUPDATE|0}') = '1';
+end;

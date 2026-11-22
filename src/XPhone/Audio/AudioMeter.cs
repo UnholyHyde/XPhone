@@ -3,40 +3,79 @@ using System.Runtime.InteropServices;
 namespace XPhone.Audio;
 
 /// <summary>
-/// Громкость звука конкретной программы (scrcpy) по данным Windows — чтобы понять, идёт ли звук с телефона.
-/// Ничего не меняет, только читает пиковый уровень.
+/// Пиковый уровень и громкость звуковых сеансов конкретного процесса.
 /// </summary>
 public static class AudioMeter
 {
     /// <summary>Пиковый уровень 0…1 звука процесса или null, если у процесса нет звука в Windows.</summary>
-    public static float? PeakForProcess(int pid)
+    public static float? PeakForProcess(int pid, float volume = 1, HashSet<string>? adjustedSessions = null)
     {
         IMMDeviceEnumerator? en = null;
         try
         {
             en = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo();
             if (en.EnumAudioEndpoints(0 /*eRender*/, 1 /*ACTIVE*/, out var col) != 0 || col == null) return null;
-            col.GetCount(out var count);
-            float? best = null;
-            for (int i = 0; i < count; i++)
+            try
             {
-                if (col.Item(i, out var dev) != 0 || dev == null) continue;
-                var iid = typeof(IAudioSessionManager2).GUID;
-                if (dev.Activate(ref iid, 23 /*CLSCTX_ALL*/, IntPtr.Zero, out var o) != 0) continue;
-                var mgr = (IAudioSessionManager2)o;
-                if (mgr.GetSessionEnumerator(out var sessions) != 0 || sessions == null) continue;
-                sessions.GetCount(out var n);
-                for (int k = 0; k < n; k++)
+                col.GetCount(out var count);
+                float? best = null;
+                for (int i = 0; i < count; i++)
                 {
-                    if (sessions.GetSession(k, out var ctl) != 0 || ctl == null) continue;
-                    if (ctl.GetProcessId(out var spid) != 0 || spid != pid) continue;
-                    if (ctl is IAudioMeterInformation meter && meter.GetPeakValue(out var peak) == 0)
-                        best = Math.Max(best ?? 0, peak);
+                    if (col.Item(i, out var dev) != 0 || dev == null) continue;
+                    try
+                    {
+                        var peak = InspectEndpoint(dev, pid, volume, adjustedSessions);
+                        if (peak.HasValue) best = Math.Max(best ?? 0, peak.Value);
+                    }
+                    finally { Marshal.ReleaseComObject(dev); }
                 }
+                return best;
             }
-            return best;
+            finally { Marshal.ReleaseComObject(col); }
         }
         catch { return null; }
+        finally { if (en != null) Marshal.ReleaseComObject(en); }
+    }
+
+    private static float? InspectEndpoint(IMMDevice device, int pid, float volume, HashSet<string>? adjustedSessions)
+    {
+        var iid = typeof(IAudioSessionManager2).GUID;
+        if (device.Activate(ref iid, 23 /*CLSCTX_ALL*/, IntPtr.Zero, out var obj) != 0) return null;
+        try
+        {
+            var manager = (IAudioSessionManager2)obj;
+            if (manager.GetSessionEnumerator(out var sessions) != 0 || sessions == null) return null;
+            try
+            {
+                float? best = null;
+                sessions.GetCount(out var count);
+                for (int i = 0; i < count; i++)
+                {
+                    if (sessions.GetSession(i, out var session) != 0 || session == null) continue;
+                    try
+                    {
+                        if (session is not IAudioSessionControl2 control ||
+                            control.GetProcessId(out var sessionPid) != 0 || sessionPid != pid) continue;
+                        if (adjustedSessions != null && session is ISimpleAudioVolume audio &&
+                            control.GetSessionInstanceIdentifier(out var identifier) == 0)
+                        {
+                            string? id;
+                            try { id = Marshal.PtrToStringUni(identifier); }
+                            finally { Marshal.FreeCoTaskMem(identifier); }
+                            if (id != null && !adjustedSessions.Contains(id) &&
+                                audio.SetMasterVolume(volume, IntPtr.Zero) == 0)
+                                adjustedSessions.Add(id);
+                        }
+                        if (session is IAudioMeterInformation meter && meter.GetPeakValue(out var peak) == 0)
+                            best = Math.Max(best ?? 0, peak);
+                    }
+                    finally { Marshal.ReleaseComObject(session); }
+                }
+                return best;
+            }
+            finally { Marshal.ReleaseComObject(sessions); }
+        }
+        finally { Marshal.ReleaseComObject(obj); }
     }
 
     // ── COM ─────────────────────────────────────────────────────────────
@@ -75,7 +114,7 @@ public static class AudioMeter
     private interface IAudioSessionEnumerator
     {
         [PreserveSig] int GetCount(out int count);
-        [PreserveSig] int GetSession(int index, out IAudioSessionControl2 session);
+        [PreserveSig] int GetSession(int index, [MarshalAs(UnmanagedType.IUnknown)] out object session);
     }
 
     [ComImport, Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -101,5 +140,11 @@ public static class AudioMeter
     private interface IAudioMeterInformation
     {
         [PreserveSig] int GetPeakValue(out float peak);
+    }
+
+    [ComImport, Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface ISimpleAudioVolume
+    {
+        [PreserveSig] int SetMasterVolume(float level, IntPtr eventContext);
     }
 }
